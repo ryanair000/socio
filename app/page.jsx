@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import Link from 'next/link'
 
 // Placeholder icons - replace with actual SVGs or an icon library later
 const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>;
@@ -59,7 +60,12 @@ export default function Home() {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
-      setGeneratedCaption(data.caption);
+      let finalCaption = data.caption.trim(); // Remove leading/trailing whitespace
+      if (finalCaption.startsWith('"') && finalCaption.endsWith('"')) {
+        finalCaption = finalCaption.slice(1, -1); // Remove first and last character
+      }
+      
+      setGeneratedCaption(finalCaption); // Set the potentially modified caption
 
     } catch (err) {
       console.error("API call failed:", err);
@@ -77,20 +83,37 @@ export default function Home() {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           {/* Left: Logo */}
           <div className="flex items-center">
-            {/* You can replace this with a CaptionMagic logo/text if needed */}
-            <svg width="40" height="40" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className="text-tripadvisor-green mr-2">
-              <circle cx="128" cy="128" r="120" fill="#34E0A1" />
-              <path d="M128 58c-38.6 0-70 31.4-70 70s31.4 70 70 70 70-31.4 70-70-31.4-70-70-70zm-35 70c0-19.3 15.7-35 35-35s35 15.7 35 35-15.7 35-35 35-35-15.7-35-35z" fill="#FFF" />
-              <circle cx="108" cy="128" r="15" fill="#000A12" />
-              <circle cx="148" cy="128" r="15" fill="#000A12" />
-            </svg>
-            <span className="font-bold text-2xl text-tripadvisor-text-dark">CaptionMagic</span> {/* Changed name */}
+            <Link href="/" className="flex items-center">
+              <svg width="40" height="40" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className="text-tripadvisor-green mr-2">
+                <circle cx="128" cy="128" r="120" fill="#34E0A1" />
+                <path d="M128 58c-38.6 0-70 31.4-70 70s31.4 70 70 70 70-31.4 70-70-31.4-70-70-70zm-35 70c0-19.3 15.7-35 35-35s35 15.7 35 35-15.7 35-35 35-35-15.7-35-35z" fill="#FFF" />
+                <circle cx="108" cy="128" r="15" fill="#000A12" />
+                <circle cx="148" cy="128" r="15" fill="#000A12" />
+              </svg>
+              <span className="font-bold text-2xl text-tripadvisor-text-dark">CaptionMagic</span> {/* Changed name */}
+            </Link>
+          </div>
+
+          {/* Center: Navigation Links (Optional - can be kept or removed) */}
+          <div className="hidden md:flex items-center space-x-8">
+            {/* Example link - adapt as needed */}
+            <Link href="/" className="text-gray-600 hover:text-tripadvisor-green font-medium text-sm">Generator</Link>
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center space-x-4">
-            {/* <button> ... <GlobeIcon /> ... </button> */}
-            {/* <button> ... <UserIcon /> ... </button> */}
+          <div className="flex items-center space-x-4 md:space-x-6">
+            <Link 
+              href="/pricing"
+              className="text-sm font-medium text-gray-600 hover:text-tripadvisor-green transition-colors duration-150"
+            >
+              Pricing
+            </Link>
+            <Link 
+              href="/auth" 
+              className="text-sm font-medium text-white bg-tripadvisor-green hover:bg-opacity-90 transition-colors duration-150 px-4 py-2 rounded-full shadow-sm"
+            >
+              Login / Sign Up
+            </Link>
           </div>
         </nav>
       </header>
@@ -112,7 +135,7 @@ export default function Home() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g., sunny beach day, new product, coffee vibes"
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out" 
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out text-gray-900"
               required
             />
           </div>
@@ -126,7 +149,7 @@ export default function Home() {
               id="platform"
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out bg-white"
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Instagram</option>
               <option>Twitter</option>
@@ -145,7 +168,7 @@ export default function Home() {
               id="tone"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out bg-white"
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-tripadvisor-green focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Casual</option>
               <option>Professional</option>
@@ -199,13 +222,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
            {/* Left: Logo */}
            <div className="flex items-center">
-            <svg width="30" height="30" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className="text-tripadvisor-green mr-2">
-              <circle cx="128" cy="128" r="120" fill="#34E0A1" />
-              <path d="M128 58c-38.6 0-70 31.4-70 70s31.4 70 70 70 70-31.4 70-70-31.4-70-70-70zm-35 70c0-19.3 15.7-35 35-35s35 15.7 35 35-15.7 35-35 35-35-15.7-35-35z" fill="#FFF" />
-              <circle cx="108" cy="128" r="15" fill="#000A12" />
-              <circle cx="148" cy="128" r="15" fill="#000A12" />
-            </svg>
-            <span className="font-bold text-xl">CaptionMagic</span> {/* Changed name */}
+            <Link href="/" className="flex items-center">
+              <svg width="30" height="30" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className="text-tripadvisor-green mr-2">
+                <circle cx="128" cy="128" r="120" fill="#34E0A1" />
+                <path d="M128 58c-38.6 0-70 31.4-70 70s31.4 70 70 70 70-31.4 70-70-31.4-70-70-70zm-35 70c0-19.3 15.7-35 35-35s35 15.7 35 35-15.7 35-35 35-35-15.7-35-35z" fill="#FFF" />
+                <circle cx="108" cy="128" r="15" fill="#000A12" />
+                <circle cx="148" cy="128" r="15" fill="#000A12" />
+              </svg>
+              <span className="font-bold text-xl">CaptionMagic</span> {/* Changed name */}
+            </Link>
            </div>
            {/* Right: Curated By */}
            <div className="flex items-center">

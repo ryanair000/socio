@@ -75,7 +75,7 @@ export async function POST(request) {
 
     // Call Replicate API
     const output = await replicate.run(
-      "microsoft/phi-3-mini-4k-instruct:8b9a816f3a9adf5c97a30a6d3d277b2f16785abf65e4e02d00d4a1e9f32a5e3a",
+      "microsoft/phi-3-mini-4k-instruct:e17386e6ae2e351f63783fa89f427fd0ed415524a7b3d8c122f6ac80ad0166b1",
       {
         input: {
           prompt: fullPrompt,
