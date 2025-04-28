@@ -1,0 +1,9 @@
+# Netlify configuration for a Next.js project
+
+[build]
+  command = "next build"  # The command to build the site
+  publish = ".next"       # The directory containing the built site
+
+# Plugin to handle Next.js specific deployment tasks (like ISR, Middleware, Image Optimization)
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 
