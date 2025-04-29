@@ -85,7 +85,7 @@ export default function Home() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
                <Image 
-                  src="/socio-logo.png"
+                  src="/socio.png"
                   alt="Socio Logo"
                   width={120}
                   height={33}

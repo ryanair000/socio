@@ -164,7 +164,7 @@ export default function AuthPage() {
           <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
             <div className="flex items-center justify-center mb-6">
                  <Image 
-                    src="/socio-logo.png"
+                    src="/socio.png"
                     alt="Socio Logo"
                     width={180}
                     height={50}
@@ -317,7 +317,7 @@ export default function AuthPage() {
                {/* Optional: Add faded logo to background */}
                <div className="absolute inset-0 flex justify-center items-center opacity-10 z-0">
                   <Image 
-                      src="/socio-logo.png"
+                      src="/socio.png"
                       alt=""
                       width={400}
                       height={111} 
