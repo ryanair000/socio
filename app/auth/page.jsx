@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../lib/supabase/client';
 
@@ -161,8 +162,14 @@ export default function AuthPage() {
           
           {/* Left Column: Form */}
           <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
-            <div className="flex items-center justify-center mb-4">
-                <span className="font-semibold text-xl text-gray-800">CaptionMagic</span>
+            <div className="flex items-center justify-center mb-6">
+                 <Image 
+                    src="/socio-logo.png"
+                    alt="Socio Logo"
+                    width={180}
+                    height={50}
+                    priority
+                 />
              </div>
             <h1 className="text-2xl font-semibold text-gray-900 mb-4 text-center">
               {isLogin ? 'Log in to your account' : 'Create your account'}
@@ -170,20 +177,20 @@ export default function AuthPage() {
 
             {/* Error Display */}
             {error && (
-               <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+               <div className="mb-3 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-sm">
                   {error}
                </div>
             )}
 
-            {/* OAuth Buttons */}
+            {/* OAuth Buttons - Added accent color on hover */}
             <div className="space-y-2 mb-4">
-              <button disabled={loading} onClick={() => handleOAuthSignIn('google')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150 disabled:opacity-60">
+              <button disabled={loading} onClick={() => handleOAuthSignIn('google')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-accent-yellow hover:text-accent-yellow transition duration-150 disabled:opacity-60">
                 <GoogleIcon /> Sign in with Google
               </button>
-              <button disabled={loading} onClick={() => handleOAuthSignIn('github')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150 disabled:opacity-60">
+              <button disabled={loading} onClick={() => handleOAuthSignIn('github')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-accent-yellow hover:text-accent-yellow transition duration-150 disabled:opacity-60">
                 <GithubIcon /> Sign in with GitHub
               </button>
-              <button disabled={loading} onClick={() => handleOAuthSignIn('spotify')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150 disabled:opacity-60">
+              <button disabled={loading} onClick={() => handleOAuthSignIn('spotify')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-accent-yellow hover:text-accent-yellow transition duration-150 disabled:opacity-60">
                 <SpotifyIcon /> Sign in with Spotify
               </button>
             </div>
@@ -194,14 +201,13 @@ export default function AuthPage() {
               <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div>
             </div>
 
-            {/* --- Auth Mode Toggle --- */}
+            {/* Auth Mode Toggle - Added accent color for active state */}
             <div className="flex justify-center space-x-4 mb-4">
-                <button onClick={() => setAuthMode('email')} disabled={loading} className={`px-4 py-1.5 rounded-md text-sm font-medium ${authMode === 'email' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}>Email</button>
-                <button onClick={() => setAuthMode('phone')} disabled={loading} className={`px-4 py-1.5 rounded-md text-sm font-medium ${authMode === 'phone' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}>Phone</button>
+                <button onClick={() => setAuthMode('email')} disabled={loading} className={`px-4 py-1.5 rounded-md text-sm font-medium ${authMode === 'email' ? 'bg-accent-yellow text-white' : 'text-gray-500 hover:bg-gray-100'}`}>Email</button>
+                <button onClick={() => setAuthMode('phone')} disabled={loading} className={`px-4 py-1.5 rounded-md text-sm font-medium ${authMode === 'phone' ? 'bg-accent-yellow text-white' : 'text-gray-500 hover:bg-gray-100'}`}>Phone</button>
             </div>
-            {/* --- End Auth Mode Toggle --- */}
             
-            {/* --- Conditional Forms --- */} 
+            {/* Conditional Forms */} 
             {authMode === 'email' && (
               <form onSubmit={isLogin ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
                 <div>
@@ -217,7 +223,7 @@ export default function AuthPage() {
                     disabled={loading}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
+                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-accent-yellow focus:border-accent-yellow transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
                   />
                 </div>
 
@@ -228,7 +234,7 @@ export default function AuthPage() {
                     </label>
                     {isLogin && (
                       <div className="text-sm">
-                        <a href="#" className="font-medium text-gray-600 hover:text-gray-900">
+                        <a href="#" className="font-medium text-gray-600 hover:text-accent-yellow">
                           Forgot password?
                         </a>
                       </div>
@@ -243,20 +249,16 @@ export default function AuthPage() {
                     disabled={loading}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
+                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-accent-yellow focus:border-accent-yellow transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 transition duration-150 disabled:opacity-60"
+                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-yellow transition duration-150 disabled:opacity-60"
                 >
-                  {loading ? (
-                    <span>Processing...</span>
-                  ) : (
-                     isLogin ? 'Sign in' : 'Sign up'
-                  )}
+                  {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Sign Up')}
                 </button>
               </form>
             )}
@@ -264,60 +266,71 @@ export default function AuthPage() {
             {authMode === 'phone' && (
               <form onSubmit={handlePhoneSignIn} className="space-y-4">
                 <div>
-                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1"> Phone Number </label>
-                   <input id="phone" name="phone" type="tel" // Use type="tel" for better mobile UX
-                     autoComplete="tel"
-                     required disabled={loading}
-                     value={phoneNumber}
-                     onChange={(e) => setPhoneNumber(e.target.value)}
-                     placeholder="+12223334444" // Example E.164 format
-                     className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"/>
+                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                     Phone Number (e.g., +15551234567)
+                   </label>
+                   <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required disabled={loading}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-accent-yellow focus:border-accent-yellow transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
+                   />
                 </div>
-                 {/* --- Submit Button (Send OTP) --- */}
-                <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 transition duration-150 disabled:opacity-60">
-                  {loading ? (<span>Sending OTP...</span>) : ('Send OTP')}
-                </button>
-                {/* Add OTP input field here conditionally when otpSent is true */}
-                {otpSent && <p className="text-sm text-green-600 text-center mt-2">OTP sent! Check your phone.</p>}
+                 {/* Submit Button - Changed background to accent color */}
+                 <button
+                   type="submit"
+                   disabled={loading || otpSent}
+                   className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-yellow hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-yellow transition duration-150 disabled:opacity-60"
+                 >
+                   {loading ? 'Sending OTP...' : 'Send OTP'}
+                 </button>
               </form>
             )}
             {/* --- End Conditional Forms --- */}
             
-            {/* Toggle Link (only show for email mode) */} 
-            {authMode === 'email' && (
-               <p className="mt-6 text-center text-sm text-gray-600">
-                 {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-                 <button disabled={loading} onClick={() => setIsLogin(!isLogin)} className="font-medium text-gray-900 hover:text-gray-700 underline disabled:opacity-60">
-                   {isLogin ? 'Sign up' : 'Sign in'}
-                 </button>
-               </p>
-            )}
+            {/* Sign Up/Login Toggle - Added accent color on hover */}
+            <div className="mt-6 text-center text-sm text-gray-600">
+              {isLogin ? (
+                <>
+                  Don't have an account?{' '}
+                  <button onClick={() => setIsLogin(false)} disabled={loading} className="font-medium text-accent-yellow hover:text-yellow-500">
+                    Sign up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button onClick={() => setIsLogin(true)} disabled={loading} className="font-medium text-accent-yellow hover:text-yellow-500">
+                    Log in
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Right Column: Visual / Promo */}
-          <div className="w-full md:w-1/2 bg-gradient-to-br from-green-50 via-cyan-50 to-blue-100 p-6 md:p-10 flex flex-col justify-center items-center relative overflow-hidden">
-             {/* Latest Updates Box (Updated) */}
-            <div className="bg-white/70 backdrop-blur-md rounded-lg p-6 shadow-lg text-center w-full max-w-sm">
-              <span className="inline-block bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
-                LATEST UPDATES
-              </span>
-              {/* Display dynamic title and description */}
-              <h3 className="text-xl font-semibold text-gray-800 mb-2 h-14 flex items-center justify-center"> {/* Added fixed height */} 
-                {latestUpdates[currentUpdateIndex].title}
-              </h3>
-              <p className="text-sm text-gray-600 mb-4 h-10"> {/* Added fixed height */}
-                 {latestUpdates[currentUpdateIndex].description}
-              </p>
-              {/* Functional Buttons */}
-              <div className="flex justify-center space-x-3">
-                <button onClick={handlePrevUpdate} className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
-                  <ArrowLeftIcon />
-                </button>
-                <button onClick={handleNextUpdate} className="p-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
-                  <ArrowRightIcon />
-                </button>
-              </div>
-            </div>
+          {/* Right Column: Decorative/Info (Can add logo here too if desired) */}
+          <div className="hidden md:flex w-1/2 bg-gradient-to-br from-gray-800 to-gray-900 p-10 flex-col justify-center items-center text-white relative">
+               {/* Optional: Add faded logo to background */}
+               <div className="absolute inset-0 flex justify-center items-center opacity-10 z-0">
+                  <Image 
+                      src="/socio-logo.png"
+                      alt=""
+                      width={400}
+                      height={111} 
+                      aria-hidden="true"
+                   />
+               </div>
+               {/* Content on top */}
+               <div className="relative z-10 text-center"> 
+                   <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
+                   <p className="text-gray-300 mb-8">
+                      Log in or sign up to continue.
+                   </p>
+                </div>
           </div>
         </div>
       </div>
