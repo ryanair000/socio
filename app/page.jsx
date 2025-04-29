@@ -94,22 +94,24 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Center: Navigation Links (Optional - can be kept or removed) */}
+          {/* Center: Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-600 hover:text-accent-yellow font-medium text-sm">Generator</Link>
+            <Link href="/" className="text-gray-600 hover:bg-gradient-to-r hover:from-lime-400 hover:via-yellow-300 hover:to-cyan-400 hover:bg-clip-text hover:text-transparent font-medium text-sm transition-all duration-150">
+              Generator
+            </Link>
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center space-x-4 md:space-x-6">
             <Link 
               href="/pricing"
-              className="text-sm font-medium text-gray-600 hover:text-accent-yellow transition-colors duration-150"
+              className="text-sm font-medium text-gray-600 hover:bg-gradient-to-r hover:from-lime-400 hover:via-yellow-300 hover:to-cyan-400 hover:bg-clip-text hover:text-transparent transition-all duration-150"
             >
               Pricing
             </Link>
             <Link 
               href="/auth" 
-              className="text-sm font-medium text-white bg-accent-yellow hover:bg-yellow-500 transition-colors duration-150 px-4 py-2 rounded-full shadow-sm"
+              className="text-sm font-medium text-white bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 transition-all duration-150 px-4 py-2 rounded-full shadow-sm"
             >
               Login / Sign Up
             </Link>
@@ -119,11 +121,13 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-10">Generate Your Next Caption</h1>
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-10 bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 bg-clip-text text-transparent text-center">
+          Generate Your Next Caption
+        </h1>
 
         {/* Input Section */}
         <div className="w-full max-w-lg bg-white p-6 md:p-8 rounded-lg shadow-md space-y-5 mb-8"> 
-          {/* Topic Input */}
+          {/* Topic Input - Focus Ring */}
           <div>
             <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
               What is your caption about?
@@ -134,12 +138,12 @@ export default function Home() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g., sunny beach day, new product, coffee vibes"
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
               required
             />
           </div>
 
-          {/* Platform Selection */}
+          {/* Platform Selection - Focus Ring */}
           <div>
             <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
               Platform
@@ -148,7 +152,7 @@ export default function Home() {
               id="platform"
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Instagram</option>
               <option>Twitter</option>
@@ -158,7 +162,7 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Tone Selection */}
+          {/* Tone Selection - Focus Ring */}
           <div>
             <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
               Tone
@@ -167,7 +171,7 @@ export default function Home() {
               id="tone"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-yellow focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Casual</option>
               <option>Professional</option>
@@ -179,11 +183,11 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Generate Button */}
+          {/* Generate Button - Gradient Background */}
           <button
             onClick={handleGenerateCaption} 
             disabled={isLoading || !topic.trim()}
-            className="w-full bg-accent-yellow text-white font-bold py-3 px-4 rounded-full hover:bg-yellow-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
+            className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
           >
             {isLoading ? (
                <> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating...</span> </> 
@@ -198,7 +202,7 @@ export default function Home() {
           <h3 className="text-lg font-semibold mb-3 text-gray-800">Generated Caption:</h3>
           {isLoading && (
             <div className="flex justify-center items-center h-20">
-                 <svg className="animate-spin h-6 w-6 text-accent-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                 <svg className="animate-spin h-6 w-6 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             </div>
           )} 
           {error && (
