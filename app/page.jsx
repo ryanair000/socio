@@ -83,6 +83,7 @@ export default function Home() {
   const [imagePreview, setImagePreview] = useState(null);
   const [resizedImageData, setResizedImageData] = useState(null); // Store resized data URL
   const [imageCategory, setImageCategory] = useState(null); // New state for selected category
+  const [userKeywords, setUserKeywords] = useState(''); // New state for keywords
 
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
@@ -92,6 +93,7 @@ export default function Home() {
     setResizedImageData(null); // Clear previous resized data
     setError(null); // Clear previous errors
     setImageCategory(null); // Reset category
+    setUserKeywords(''); // Reset keywords
     
     if (file) {
       setIsLoading(true); // Show loading while resizing
@@ -151,7 +153,8 @@ export default function Home() {
         prompt: {
           platform: platform,
           tone: tone,
-          category: imageCategory
+          category: imageCategory,
+          keywords: userKeywords.trim() // Include keywords (will be empty string if none)
         }
       };
     } else {
@@ -290,7 +293,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-             // Image Input Field & Category Picker 
+             // Image Input Field & Category Picker & Keywords
             <div className="space-y-4 pt-4">
                <div>
                  <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
@@ -345,6 +348,25 @@ export default function Home() {
                  </div>
                )}
                {/* --- End Category Picker --- */}
+
+               {/* --- Keyword Input (Optional) --- */}
+               {resizedImageData && imageCategory && ( // Show only after image and category selected
+                 <div className="pt-4 border-t border-gray-100">
+                    <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
+                      ✨ Add Optional Keywords?
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">e.g., #BirthdayFun, Teamwork, Gourmet</p>
+                   <input
+                     type="text"
+                     id="keywords"
+                     value={userKeywords}
+                     onChange={(e) => setUserKeywords(e.target.value)}
+                     placeholder="Type keywords here... 🎨"
+                     className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                   />
+                 </div>
+               )}
+               {/* --- End Keyword Input --- */}
             </div>
           )}
 
