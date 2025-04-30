@@ -26,6 +26,48 @@ function readFileAsDataURL(file) {
   });
 }
 
+// --- NEW: Helper function to resize image using Canvas ---
+function resizeImage(file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Get the data URL of the resized image
+        // Use JPEG format with quality setting for compression
+        resolve(canvas.toDataURL('image/jpeg', quality)); 
+      };
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+// --- END NEW HELPER ---
+
 export default function Home() {
   // Caption Generation State
   const [topic, setTopic] = useState('');
@@ -39,21 +81,29 @@ export default function Home() {
   const [inputMode, setInputMode] = useState('text'); // 'text' or 'image'
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [resizedImageData, setResizedImageData] = useState(null); // Store resized data URL
 
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
+    setImageFile(file); // Store original file
+    setImagePreview(null); // Clear previous preview
+    setResizedImageData(null); // Clear previous resized data
+    setError(null); // Clear previous errors
+    
     if (file) {
-      setImageFile(file);
-      // Generate preview
+      setIsLoading(true); // Show loading while resizing
       try {
-        const dataUrl = await readFileAsDataURL(file);
-        setImagePreview(dataUrl);
+        // Resize the image and get data URL
+        const resizedDataUrl = await resizeImage(file); 
+        setImagePreview(resizedDataUrl); // Use resized image for preview
+        setResizedImageData(resizedDataUrl); // Store resized data for sending
       } catch (err) {
-        console.error("Error reading file:", err);
-        setError("Could not preview image.");
-        setImagePreview(null);
-        setImageFile(null);
+        console.error("Error resizing image:", err);
+        setError("Could not process image. Please try a different one.");
+        setImageFile(null); // Clear file state on error
+      } finally {
+        setIsLoading(false);
       }
     } else {
       setImageFile(null);
@@ -83,34 +133,26 @@ export default function Home() {
         }
       };
     } else if (inputMode === 'image') {
-      if (!imageFile) {
-        setError("Please select an image file.");
+      if (!resizedImageData) {
+        setError("Please select and process an image file.");
         setIsLoading(false);
         return;
       }
-      try {
-        const imageData = await readFileAsDataURL(imageFile);
-        requestBody = {
-          type: 'image',
-          imageData: imageData,
-          prompt: { // Still send prompt for context (tone/platform)
-            platform: platform,
-            tone: tone,
-          }
-        };
-      } catch (err) {
-        console.error("Error reading image file for upload:", err);
-        setError("Failed to process image file.");
-        setIsLoading(false);
-        return;
-      }
+      requestBody = {
+        type: 'image',
+        imageData: resizedImageData,
+        prompt: {
+          platform: platform,
+          tone: tone,
+        }
+      };
     } else {
       setError("Invalid input mode selected.");
       setIsLoading(false);
       return;
     }
 
-    // API Call (now sends different body based on mode)
+    // API Call (no changes needed here, sends requestBody)
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -238,21 +280,27 @@ export default function Home() {
                  <input
                    type="file"
                    id="image-upload"
-                   accept="image/*" // Accept only image files
+                   accept="image/png, image/jpeg, image/webp" // Specify accepted types
                    onChange={handleImageChange}
                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-lime-50 file:text-lime-700 hover:file:bg-lime-100"
                  />
                </div>
                {/* Image Preview */}
                {imagePreview && (
-                  <div className="mt-4 border rounded-md overflow-hidden">
+                  <div className="mt-4 border rounded-md overflow-hidden bg-gray-100 flex justify-center items-center min-h-[200px]"> {/* Added styling */}
                      <Image 
                        src={imagePreview}
                        alt="Image preview"
                        width={400} 
                        height={300} 
-                       style={{ objectFit: 'contain', width: '100%', height: 'auto' }} 
+                       style={{ objectFit: 'contain', width: '100%', height: 'auto', maxHeight: '300px' }} 
                      />
+                  </div>
+               )}
+               {/* Add loading indicator during resize */} 
+               {isLoading && inputMode === 'image' && !imagePreview && (
+                  <div className="flex justify-center items-center h-20 text-gray-500">
+                     Processing image...
                   </div>
                )}
             </div>
@@ -304,7 +352,7 @@ export default function Home() {
           {/* Generate Button - Gradient Background */}
           <button
             onClick={handleGenerateCaption} 
-            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && !imageFile)}
+            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && !resizedImageData)}
             className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
           >
             {isLoading ? (
