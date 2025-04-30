@@ -254,11 +254,17 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-10 bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 bg-clip-text text-transparent text-center">
-          Generate Your Next Caption
-        </h1>
-
-        {/* --- New Wrapper Div for Side-by-Side Layout --- */}
+        {/* Adjusted Heading Section */}
+        <div className="text-center mb-12"> {/* Increased bottom margin */} 
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 bg-clip-text text-transparent">
+            🎨 Snap, Caption, Share!
+          </h1>
+          <p className="mt-3 text-base md:text-lg text-gray-600 max-w-xl mx-auto">
+            Turn images into viral captions with one click. 🚀 Add themes, keywords, or let the AI surprise you!
+          </p>
+        </div>
+        
+        {/* --- Wrapper Div for Side-by-Side Layout --- */}
         <div className="w-full flex flex-col lg:flex-row gap-8 justify-center items-start">
 
           {/* Input Section (Card 1) */}
