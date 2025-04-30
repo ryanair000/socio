@@ -19,8 +19,12 @@ import {
   ArrowUpCircleIcon,
   ArrowLeftOnRectangleIcon,
   ArrowRightOnRectangleIcon,
+  CheckIcon as HeroCheckIcon,
 } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
+
+// Simple Check Icon for Pricing Section
+const CheckIcon = () => <HeroCheckIcon className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />;
 
 // Placeholder icons - replace with actual SVGs or an icon library later
 const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>;
@@ -750,6 +754,65 @@ export default function Home() {
         </div>
       </section>
       {/* --- End Newsletter Section --- */}
+
+      {/* --- Simple Pricing Overview Section --- */}
+      <section className="bg-white py-16 px-4 md:px-8">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl font-semibold text-gray-800 mb-3">Find the Perfect Plan</h2>
+          <p className="text-gray-600 mb-10">
+            Choose the plan that best fits your needs. More details on our <Link href="/pricing" className="text-accent-magenta hover:underline">pricing page</Link>.
+          </p>
+
+          {/* Pricing Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Free Plan Card */}
+            <div className="border border-gray-200 rounded-lg p-6 flex flex-col items-center">
+              <h3 className="text-xl font-semibold mb-2 text-gray-700">Free</h3>
+              <p className="text-3xl font-bold text-accent-magenta mb-4">$0<span className="text-sm font-normal text-gray-500">/month</span></p>
+              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.text} Text Generations</li>
+                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
+                <li className="flex items-center"><CheckIcon /> Basic Support</li>
+              </ul>
+              <Link href="/auth" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
+                Get Started
+              </Link>
+            </div>
+
+            {/* Basic Plan Card (Example) */}
+            <div className="border border-accent-magenta rounded-lg p-6 flex flex-col items-center shadow-lg relative">
+              <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent-magenta text-white text-xs font-bold px-3 py-1 rounded-full">Popular</span>
+              <h3 className="text-xl font-semibold mb-2 text-gray-700">Basic</h3>
+              <p className="text-3xl font-bold text-accent-magenta mb-4">$9<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */} 
+              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.text} Text Generations</li>
+                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.image} Image Generations</li>
+                <li className="flex items-center"><CheckIcon /> Priority Support</li>
+                <li className="flex items-center"><CheckIcon /> More Tone Options</li>
+              </ul>
+              <Link href="/pricing" className="mt-auto w-full text-center bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-150">
+                Choose Basic
+              </Link>
+            </div>
+
+            {/* Pro Plan Card (Example) */}
+            <div className="border border-gray-200 rounded-lg p-6 flex flex-col items-center">
+              <h3 className="text-xl font-semibold mb-2 text-gray-700">Pro</h3>
+              <p className="text-3xl font-bold text-accent-magenta mb-4">$29<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */}
+              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                <li className="flex items-center"><CheckIcon /> Unlimited Text Generations</li>
+                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.pro.image} Image Generations</li>
+                <li className="flex items-center"><CheckIcon /> Dedicated Support</li>
+                <li className="flex items-center"><CheckIcon /> Early Access Features</li>
+              </ul>
+              <Link href="/pricing" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
+                Choose Pro
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* --- End Simple Pricing Overview Section --- */}
 
       {/* Footer */}
       <footer className="bg-white text-gray-600 py-6 px-4 md:px-8 mt-auto border-t border-gray-200">
