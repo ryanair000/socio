@@ -16,8 +16,8 @@ const ratelimit = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
 
 // --- Model IDs ---
 const TEXT_MODEL_ID = "microsoft/phi-3-mini-4k-instruct:e17386e6ae2e351f63783fa89f427fd0ed415524a7b3d8c122f6ac80ad0166b1";
-// Updated based on Replicate versions page
-const IMAGE_MODEL_ID = "yorickvp/llava-13b:80537f9e90363046987998c7846569a21a54a1c653f7447c46d32d8399a9c392"; 
+// Trying the version hash from Replicate docs example
+const IMAGE_MODEL_ID = "yorickvp/llava-13b:01359160a4cff57c6b7d4dc625d0019d390c7c46f553714069f114b392f4a726"; 
 
 export async function POST(request) {
   // Optional: Rate Limiting Check
