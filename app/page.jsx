@@ -17,7 +17,10 @@ import {
   ChatBubbleOvalLeftEllipsisIcon,
   CalendarDaysIcon,
   ArrowUpCircleIcon,
+  ArrowLeftOnRectangleIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/navigation'
 
 // Placeholder icons - replace with actual SVGs or an icon library later
 const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>;
@@ -100,6 +103,7 @@ const PLAN_LIMITS = {
 
 export default function Home() {
   const supabase = createClient(); // <-- Initialize Supabase client
+  const router = useRouter(); // <-- Add useRouter for logout redirect
 
   // Caption Generation State
   const [topic, setTopic] = useState('');
@@ -137,11 +141,12 @@ export default function Home() {
           
         if (profileError) {
           console.error("Error fetching user profile:", profileError);
-          // Handle error appropriately, maybe show a message
+          setUserProfile({ userOnly: true }); // Set a placeholder if profile fetch fails but user exists
         } else {
            // Add plan limits to the profile data for easier display
           const plan = profileData.plan || 'free';
           profileData.limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+          profileData.userOnly = false; // Indicate full profile loaded
           setUserProfile(profileData);
         }
       } else {
@@ -154,9 +159,9 @@ export default function Home() {
     fetchUserProfile();
 
     // Optional: Listen for auth changes to update profile if user logs in/out
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event);
-      fetchUserProfile(); // Re-fetch profile on login/logout
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // If session exists, user is logged in/updated. If null, user logged out.
+      fetchUserProfile();
     });
 
     // Cleanup listener on component unmount
@@ -165,6 +170,24 @@ export default function Home() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
+
+  // --- NEW: Logout Handler ---
+  const handleLogout = async () => {
+    setIsLoading(true); // Reuse loading state
+    setError(null);
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+      setUserProfile(null); // Clear profile immediately
+      router.push('/auth'); // Redirect to auth page after logout
+    } catch (signOutError) {
+      console.error("Error signing out:", signOutError);
+      setError("Failed to sign out. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // --- END Logout Handler ---
 
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
@@ -307,57 +330,60 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          {/* Left: Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-               <Image 
-                  src="/socio.png"
-                  alt="Socio Logo"
-                  width={120}
-                  height={33}
-                  priority
-               />
-            </Link>
-          </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+       {/* Header */}
+      <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-sm shadow-sm py-3 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <Image
+              src="/socio.png"
+              alt="Socio Logo"
+              width={120} // Adjusted size slightly
+              height={33}
+              priority
+            />
+          </Link>
 
-          {/* Center: Navigation Links */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-600 hover:text-accent-magenta font-medium text-sm transition-colors duration-150">
-              Generator
-            </Link>
-          </div>
+          {/* Navigation */}
+          <nav className="flex items-center space-x-4 md:space-x-6">
+             <Link href="/" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Home</Link>
+             <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Pricing</Link>
+             <Link href="/support" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Support</Link>
 
-          {/* Right: Actions */}
-          <div className="flex items-center space-x-4 md:space-x-6">
-            <Link 
-              href="/pricing"
-              className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors duration-150"
-            >
-              Pricing
-            </Link>
-            <Link 
-              href="/auth" 
-              className="text-sm font-medium text-white bg-accent-magenta hover:bg-fuchsia-700 transition-colors duration-150 px-4 py-2 rounded-full shadow-sm"
-            >
-              Login / Sign Up
-            </Link>
-          </div>
-        </nav>
+             {/* Auth Link/Button */}
+             <div className="border-l border-gray-200 pl-4 md:pl-6">
+              {loadingProfile ? (
+                 <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div> // Loading state
+              ) : userProfile ? (
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoading}
+                  className="flex items-center text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors disabled:opacity-50"
+                 >
+                  <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
+                  Logout
+                 </button>
+              ) : (
+                 <Link href="/auth" className="flex items-center text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">
+                    <ArrowRightOnRectangleIcon className="w-5 h-5 mr-1" />
+                    Login / Sign Up
+                 </Link>
+              )}
+             </div>
+          </nav>
+        </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center">
-        {/* Adjusted Heading Section */}
-        <div className="text-center mb-12"> {/* Increased bottom margin */} 
-          <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 bg-clip-text text-transparent">
-            🎨 Snap, Caption, Share!
+      {/* Main Content */}
+      <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
+        {/* Main Heading */}
+        <div className="text-center mb-10 md:mb-16">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-accent-magenta to-orange-500 mb-2 inline-block">
+             🎨 Snap, Caption, Share!
           </h1>
-          <p className="mt-3 text-base md:text-lg text-gray-600 max-w-xl mx-auto">
-            Turn images into viral captions with one click. 🚀 Add themes, keywords, or let the AI surprise you!
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+             Generate captivating social media captions from your text ideas or photos in seconds.
           </p>
         </div>
         
@@ -648,39 +674,34 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-           {/* Left: Logo */}
-           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <svg width="30" height="30" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" className="text-tripadvisor-green mr-2">
-                <circle cx="128" cy="128" r="120" fill="#34E0A1" />
-                <path d="M128 58c-38.6 0-70 31.4-70 70s31.4 70 70 70 70-31.4 70-70-31.4-70-70-70zm-35 70c0-19.3 15.7-35 35-35s35 15.7 35 35-15.7 35-35 35-35-15.7-35-35z" fill="#FFF" />
-                <circle cx="108" cy="128" r="15" fill="#000A12" />
-                <circle cx="148" cy="128" r="15" fill="#000A12" />
-              </svg>
-              <span className="font-bold text-xl text-accent-magenta">CaptionMagic</span> 
-            </Link>
-           </div>
-           {/* Right: Social Icons */}
-           <div className="flex items-center space-x-4">
-             <a href="#" className="text-gray-400 hover:text-accent-magenta transition-colors duration-150">
-               <span className="sr-only">Facebook</span>
-               <FacebookIcon />
-             </a>
-             <a href="#" className="text-gray-400 hover:text-accent-magenta transition-colors duration-150">
-               <span className="sr-only">Twitter</span>
-               <TwitterIcon />
-             </a>
-             <a href="#" className="text-gray-400 hover:text-accent-magenta transition-colors duration-150">
-               <span className="sr-only">Instagram</span>
-               <InstagramIcon />
-             </a>
-             <a href="#" className="text-gray-400 hover:text-accent-magenta transition-colors duration-150">
-               <span className="sr-only">LinkedIn</span>
-               <LinkedinIcon />
-             </a>
-           </div>
+      <footer className="bg-white text-gray-600 py-6 px-4 md:px-8 mt-auto border-t border-gray-200">
+         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+            {/* Logo and Copyright */}
+            <div className="flex items-center space-x-3">
+                <Image
+                  src="/socio.png"
+                  alt="Socio Logo"
+                  width={100} // Smaller logo for footer
+                  height={28}
+                />
+                <span className="text-xs">&copy; {new Date().getFullYear()} Socio. All rights reserved.</span>
+             </div>
+
+             {/* Social Links */}
+            <div className="flex space-x-5">
+               <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-accent-magenta transition-colors">
+                  <FacebookIcon />
+               </a>
+               <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-accent-magenta transition-colors">
+                  <TwitterIcon />
+               </a>
+               <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-accent-magenta transition-colors">
+                  <InstagramIcon />
+               </a>
+               <a href="#" aria-label="LinkedIn" className="text-gray-400 hover:text-accent-magenta transition-colors">
+                  <LinkedinIcon />
+               </a>
+            </div>
         </div>
       </footer>
     </div>
