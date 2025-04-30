@@ -73,6 +73,9 @@ const PLAN_DETAILS = {
     }
     // --- End Store Transaction Details ---
 
+    // DIAGNOSTIC LOGGING
+    console.log("MPESA_ROUTE_LOG: Preparing to return success response.");
+
     // Return success response
     return NextResponse.json({
       message: 'STK Push initiated successfully. Please check your phone.',
@@ -80,6 +83,9 @@ const PLAN_DETAILS = {
     });
 
   } catch (error) {
+    // DIAGNOSTIC LOGGING
+    console.log("MPESA_ROUTE_LOG: Entered catch block.");
+
     // Handle any error from the try block
     console.error('M-Pesa STK Push Initiation Failed:', error);
     return NextResponse.json({ error: `Failed to initiate M-Pesa payment: ${error.message}` }, { status: 500 });
