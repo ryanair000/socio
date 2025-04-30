@@ -19,6 +19,8 @@ module.exports = {
         'tripadvisor-text-gray': '#5C5C5C',
         'tripadvisor-search-bg': '#F2F2F2',
         'accent-yellow': '#FACC15',
+        'accent-orange': '#F59E0B',
+        'accent-magenta': '#E5009A',
       }
     },
   },
