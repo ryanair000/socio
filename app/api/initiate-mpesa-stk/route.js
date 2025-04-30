@@ -46,10 +46,12 @@ const PLAN_DETAILS = {
     }
     // --- End Store Transaction Details ---
 
+    // Explicitly re-adding the return statement here to ensure correct parsing
     return NextResponse.json({
       message: 'STK Push initiated successfully. Please check your phone.',
       checkoutRequestId: checkoutRequestId
     });
+    // End of try block
 
   } catch (error) {
     console.error('M-Pesa STK Push Initiation Failed:', error);
