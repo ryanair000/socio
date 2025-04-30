@@ -16,6 +16,16 @@ const PlaneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" view
 const BuildingOfficeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M8.25 21v-4.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21M8.25 6.75h.75v.75h-.75V6.75Zm.75 2.25h.75v.75h-.75V9Zm.75 2.25h.75v.75h-.75v-.75Zm2.25-4.5h.75v.75h-.75V6.75Zm.75 2.25h.75v.75h-.75V9Zm.75 2.25h.75v.75h-.75v-.75Z" /></svg>;
 const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" /></svg>;
 
+// Helper function to read file as data URL
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Home() {
   // Caption Generation State
   const [topic, setTopic] = useState('');
@@ -25,47 +35,103 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // New state for image/text mode and image data
+  const [inputMode, setInputMode] = useState('text'); // 'text' or 'image'
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   // --- API Call Logic ---
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Generate preview
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        setImagePreview(dataUrl);
+      } catch (err) {
+        console.error("Error reading file:", err);
+        setError("Could not preview image.");
+        setImagePreview(null);
+        setImageFile(null);
+      }
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
   const handleGenerateCaption = async () => {
     setIsLoading(true);
     setError(null);
     setGeneratedCaption('');
 
-    // Basic input validation
-    if (!topic.trim()) {
-      setError("Please enter a topic for the caption.");
+    let requestBody = {};
+
+    if (inputMode === 'text') {
+      if (!topic.trim()) {
+        setError("Please enter a topic for the caption.");
+        setIsLoading(false);
+        return;
+      }
+      requestBody = {
+        type: 'text',
+        prompt: {
+          topic: topic,
+          platform: platform,
+          tone: tone,
+        }
+      };
+    } else if (inputMode === 'image') {
+      if (!imageFile) {
+        setError("Please select an image file.");
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const imageData = await readFileAsDataURL(imageFile);
+        requestBody = {
+          type: 'image',
+          imageData: imageData,
+          prompt: { // Still send prompt for context (tone/platform)
+            platform: platform,
+            tone: tone,
+          }
+        };
+      } catch (err) {
+        console.error("Error reading image file for upload:", err);
+        setError("Failed to process image file.");
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      setError("Invalid input mode selected.");
       setIsLoading(false);
       return;
     }
 
+    // API Call (now sends different body based on mode)
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: { // Match the structure expected by the API route
-            topic: topic,
-            platform: platform,
-            tone: tone,
-          }
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Use error message from API if available, otherwise provide generic message
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
-      let finalCaption = data.caption.trim(); // Remove leading/trailing whitespace
+      let finalCaption = data.caption.trim(); 
       if (finalCaption.startsWith('"') && finalCaption.endsWith('"')) {
-        finalCaption = finalCaption.slice(1, -1); // Remove first and last character
+        finalCaption = finalCaption.slice(1, -1); 
       }
       
-      setGeneratedCaption(finalCaption); // Set the potentially modified caption
+      setGeneratedCaption(finalCaption); 
 
     } catch (err) {
       console.error("API call failed:", err);
@@ -127,66 +193,118 @@ export default function Home() {
 
         {/* Input Section */}
         <div className="w-full max-w-lg bg-white p-6 md:p-8 rounded-lg shadow-md space-y-5 mb-8"> 
-          {/* Topic Input - Focus Ring */}
-          <div>
-            <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
-              What is your caption about?
-            </label>
-            <input
-              type="text"
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., sunny beach day, new product, coffee vibes"
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
-              required
-            />
+          {/* Mode Toggle */}
+          <div className="flex border-b border-gray-200">
+            <button 
+              onClick={() => setInputMode('text')}
+              className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Describe Topic
+            </button>
+            <button 
+              onClick={() => setInputMode('image')}
+              className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Upload Image
+            </button>
           </div>
 
-          {/* Platform Selection - Focus Ring */}
-          <div>
-            <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
-              Platform
-            </label>
-            <select
-              id="platform"
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
-            >
-              <option>Instagram</option>
-              <option>Twitter</option>
-              <option>Facebook</option>
-              <option>LinkedIn</option>
-              <option>TikTok</option>
-            </select>
-          </div>
+          {/* Conditional Inputs */} 
+          {inputMode === 'text' ? (
+            // Text Input Fields 
+            <div className="space-y-4 pt-4">
+              <div>
+                <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
+                  What is your caption about?
+                </label>
+                <input
+                  type="text"
+                  id="topic"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g., sunny beach day, new product, coffee vibes"
+                  className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                  required
+                />
+              </div>
+            </div>
+          ) : (
+             // Image Input Field 
+            <div className="space-y-4 pt-4">
+               <div>
+                 <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                   Upload Image
+                 </label>
+                 <input
+                   type="file"
+                   id="image-upload"
+                   accept="image/*" // Accept only image files
+                   onChange={handleImageChange}
+                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-lime-50 file:text-lime-700 hover:file:bg-lime-100"
+                 />
+               </div>
+               {/* Image Preview */}
+               {imagePreview && (
+                  <div className="mt-4 border rounded-md overflow-hidden">
+                     <Image 
+                       src={imagePreview}
+                       alt="Image preview"
+                       width={400} 
+                       height={300} 
+                       style={{ objectFit: 'contain', width: '100%', height: 'auto' }} 
+                     />
+                  </div>
+               )}
+            </div>
+          )}
 
-          {/* Tone Selection - Focus Ring */}
-          <div>
-            <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
-              Tone
-            </label>
-            <select
-              id="tone"
-              value={tone}
-              onChange={(e) => setTone(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
-            >
-              <option>Casual</option>
-              <option>Professional</option>
-              <option>Energetic</option>
-              <option>Witty</option>
-              <option>Formal</option>
-              <option>Friendly</option>
-              <option>Humorous</option>
-            </select>
+          {/* Common Fields: Platform & Tone */} 
+          <div className="space-y-4 border-t border-gray-200 pt-4">
+             {/* Platform Selection */}
+             <div>
+               <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
+                 Platform
+               </label>
+               <select
+                 id="platform"
+                 value={platform}
+                 onChange={(e) => setPlatform(e.target.value)}
+                 className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+               >
+                 <option>Instagram</option>
+                 <option>Twitter</option>
+                 <option>Facebook</option>
+                 <option>LinkedIn</option>
+                 <option>TikTok</option>
+               </select>
+             </div>
+
+             {/* Tone Selection */}
+             <div>
+               <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
+                 Tone
+               </label>
+               <select
+                 id="tone"
+                 value={tone}
+                 onChange={(e) => setTone(e.target.value)}
+                 className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+               >
+                 <option>Casual</option>
+                 <option>Professional</option>
+                 <option>Energetic</option>
+                 <option>Witty</option>
+                 <option>Formal</option>
+                 <option>Friendly</option>
+                 <option>Humorous</option>
+               </select>
+             </div>
           </div>
 
           {/* Generate Button - Gradient Background */}
           <button
             onClick={handleGenerateCaption} 
-            disabled={isLoading || !topic.trim()}
+            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && !imageFile)}
             className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
           >
             {isLoading ? (
