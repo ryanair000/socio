@@ -82,6 +82,7 @@ export default function Home() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [resizedImageData, setResizedImageData] = useState(null); // Store resized data URL
+  const [imageCategory, setImageCategory] = useState(null); // New state for selected category
 
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
@@ -90,6 +91,7 @@ export default function Home() {
     setImagePreview(null); // Clear previous preview
     setResizedImageData(null); // Clear previous resized data
     setError(null); // Clear previous errors
+    setImageCategory(null); // Reset category
     
     if (file) {
       setIsLoading(true); // Show loading while resizing
@@ -138,12 +140,18 @@ export default function Home() {
         setIsLoading(false);
         return;
       }
+      if (!imageCategory) {
+        setError("Please select an image category/vibe.");
+        setIsLoading(false);
+        return;
+      }
       requestBody = {
         type: 'image',
         imageData: resizedImageData,
         prompt: {
           platform: platform,
           tone: tone,
+          category: imageCategory
         }
       };
     } else {
@@ -183,6 +191,17 @@ export default function Home() {
     }
   };
   // --- End API Call Logic ---
+
+  // Define categories
+  const categories = [
+    { name: 'Party', emoji: '🎉' },
+    { name: 'Office', emoji: '🏢' },
+    { name: 'Kitchen', emoji: '🍳' },
+    { name: 'Advertisement', emoji: '📢' },
+    { name: 'Nature', emoji: '🌳' }, // Example: Added more
+    { name: 'Food', emoji: '🍕' },
+    { name: 'Travel', emoji: '✈️' }
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -271,7 +290,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-             // Image Input Field 
+             // Image Input Field & Category Picker 
             <div className="space-y-4 pt-4">
                <div>
                  <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
@@ -303,6 +322,29 @@ export default function Home() {
                      Processing image...
                   </div>
                )}
+
+               {/* --- Category Picker --- */}
+               {resizedImageData && ( // Show only after image is processed
+                 <div className="pt-4 border-t border-gray-100">
+                   <p className="block text-sm font-medium text-gray-700 mb-2 text-center">What's the vibe of your photo?</p>
+                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                     {categories.map((cat) => (
+                       <button
+                         key={cat.name}
+                         onClick={() => setImageCategory(cat.name)}
+                         className={`flex items-center justify-center space-x-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all duration-150 
+                           ${imageCategory === cat.name 
+                             ? 'border-transparent bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 text-white shadow-sm' 
+                             : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400'}`}
+                       >
+                         <span>{cat.emoji}</span>
+                         <span>{cat.name}</span>
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               {/* --- End Category Picker --- */}
             </div>
           )}
 
@@ -352,7 +394,7 @@ export default function Home() {
           {/* Generate Button - Gradient Background */}
           <button
             onClick={handleGenerateCaption} 
-            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && !resizedImageData)}
+            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && (!resizedImageData || !imageCategory))}
             className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
           >
             {isLoading ? (

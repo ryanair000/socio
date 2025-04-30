@@ -51,8 +51,8 @@ export async function POST(request) {
     if (inputType === 'text' && (!requestData.prompt || !requestData.prompt.topic || !requestData.prompt.platform || !requestData.prompt.tone)) {
       throw new Error("Missing required fields for text input: prompt.{topic, platform, tone}");
     }
-    if (inputType === 'image' && (!requestData.imageData || !requestData.prompt || !requestData.prompt.platform || !requestData.prompt.tone)) {
-      throw new Error("Missing required fields for image input: imageData, prompt.{platform, tone}");
+    if (inputType === 'image' && (!requestData.imageData || !requestData.prompt || !requestData.prompt.platform || !requestData.prompt.tone || !requestData.prompt.category)) {
+      throw new Error("Missing required fields for image input: imageData, prompt.{platform, tone, category}");
     }
   } catch (e) {
      console.error('[REQUEST_PARSE_ERROR]', e);
@@ -82,11 +82,11 @@ export async function POST(request) {
         temperature: 0.65,
       };
     } else { // inputType === 'image'
-      const { platform, tone } = requestData.prompt;
+      const { platform, tone, category } = requestData.prompt;
       const { imageData } = requestData; // imageData is expected to be a Data URI (e.g., "data:image/jpeg;base64,...")
       modelToRun = IMAGE_MODEL_ID;
       // Construct a suitable prompt for the image model
-      promptForLlava = `Generate a ${platform} caption for this image in a ${tone} tone. Focus on the main subject and action. Keep it concise.`;
+      promptForLlava = `Generate a ${platform} caption for this image, which is related to ${category}, in a ${tone} tone. Focus on the main subject and action. Keep it concise.`;
       console.log(`[IMAGE_MODE] Prompt: ${promptForLlava}`);
       replicateInput = {
         image: imageData,
