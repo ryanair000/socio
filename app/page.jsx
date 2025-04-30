@@ -122,6 +122,11 @@ export default function Home() {
   const [userKeywords, setUserKeywords] = useState(''); // New state for keywords
   const [subjectName, setSubjectName] = useState(''); // New state for name
 
+  // --- NEW: Newsletter State ---
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [newsletterMessage, setNewsletterMessage] = useState({ type: '', text: '' }); // type: 'success' or 'error'
+
   // --- NEW: User Profile State ---
   const [userProfile, setUserProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -188,6 +193,37 @@ export default function Home() {
     }
   };
   // --- END Logout Handler ---
+
+  // --- NEW: Newsletter Submit Handler ---
+  const handleNewsletterSubmit = async (event) => {
+    event.preventDefault(); // Prevent default form submission
+    setIsSubscribing(true);
+    setNewsletterMessage({ type: '', text: '' }); // Clear previous messages
+
+    if (!newsletterEmail || !newsletterEmail.includes('@')) {
+      setNewsletterMessage({ type: 'error', text: 'Please enter a valid email address.' });
+      setIsSubscribing(false);
+      return;
+    }
+
+    try {
+      // TODO: Replace with actual Supabase insert/function call
+      console.log('Subscribing email:', newsletterEmail);
+      // Example: await supabase.from('newsletter_subscriptions').insert({ email: newsletterEmail })
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setNewsletterMessage({ type: 'success', text: 'Thanks for subscribing!' });
+      setNewsletterEmail(''); // Clear input on success
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setNewsletterMessage({ type: 'error', text: 'Subscription failed. Please try again later.' });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+  // --- END Newsletter Submit Handler ---
 
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
@@ -672,6 +708,48 @@ export default function Home() {
         {/* --- End Wrapper Div --- */}
 
       </main>
+
+      {/* --- Newsletter Section --- */}
+      <section className="bg-gray-100 py-12 px-4 md:px-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl font-semibold text-gray-800 mb-3">Stay Updated!</h2>
+          <p className="text-gray-600 mb-6">
+            Subscribe to our newsletter for the latest features, tips, and updates.
+          </p>
+          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 justify-center">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={newsletterEmail} 
+              onChange={(e) => setNewsletterEmail(e.target.value)} 
+              required
+              disabled={isSubscribing} // Disable input while subscribing
+              className="flex-grow p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={isSubscribing || !newsletterEmail} // Disable button while subscribing or if email is empty
+              className="bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-3 px-6 rounded-md transition-colors duration-150 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex justify-center items-center"
+            >
+              {isSubscribing ? (
+                <>
+                   <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                   Subscribing...
+                 </>
+              ) : (
+                 'Subscribe'
+              )}
+            </button>
+          </form>
+          {/* Display Success/Error Messages */}
+          {newsletterMessage.text && (
+            <p className={`mt-4 text-sm ${newsletterMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              {newsletterMessage.text}
+            </p>
+          )}
+        </div>
+      </section>
+      {/* --- End Newsletter Section --- */}
 
       {/* Footer */}
       <footer className="bg-white text-gray-600 py-6 px-4 md:px-8 mt-auto border-t border-gray-200">
