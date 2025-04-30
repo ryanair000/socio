@@ -255,198 +255,207 @@ export default function Home() {
           Generate Your Next Caption
         </h1>
 
-        {/* Input Section */}
-        <div className="w-full max-w-lg bg-white p-6 md:p-8 rounded-lg shadow-md space-y-5 mb-8"> 
-          {/* Mode Toggle */}
-          <div className="flex border-b border-gray-200">
-            <button 
-              onClick={() => setInputMode('text')}
-              className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Describe Topic
-            </button>
-            <button 
-              onClick={() => setInputMode('image')}
-              className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Upload Image
-            </button>
-          </div>
+        {/* --- New Wrapper Div for Side-by-Side Layout --- */}
+        <div className="w-full flex flex-col lg:flex-row gap-8 justify-center items-start">
 
-          {/* Conditional Inputs */} 
-          {inputMode === 'text' ? (
-            // Text Input Fields 
-            <div className="space-y-4 pt-4">
-              <div>
-                <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
-                  What is your caption about?
-                </label>
-                <input
-                  type="text"
-                  id="topic"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g., sunny beach day, new product, coffee vibes"
-                  className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
-                  required
-                />
-              </div>
+          {/* Input Section (Card 1) */}
+          {/* Adjusted width and removed bottom margin */}
+          <div className="w-full lg:w-1/2 max-w-lg bg-white p-6 md:p-8 rounded-lg shadow-md space-y-5"> 
+            {/* Mode Toggle */}
+            <div className="flex border-b border-gray-200">
+              <button 
+                onClick={() => setInputMode('text')}
+                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Describe Topic
+              </button>
+              <button 
+                onClick={() => setInputMode('image')}
+                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-lime-500 text-lime-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Upload Image
+              </button>
             </div>
-          ) : (
-             // Image Input Field & Category Picker & Keywords
-            <div className="space-y-4 pt-4">
-               <div>
-                 <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
-                   Upload Image
-                 </label>
-                 <input
-                   type="file"
-                   id="image-upload"
-                   accept="image/png, image/jpeg, image/webp" // Specify accepted types
-                   onChange={handleImageChange}
-                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-lime-50 file:text-lime-700 hover:file:bg-lime-100"
-                 />
-               </div>
-               {/* Image Preview */}
-               {imagePreview && (
-                  <div className="mt-4 border rounded-md overflow-hidden bg-gray-100 flex justify-center items-center min-h-[200px]"> {/* Added styling */}
-                     <Image 
-                       src={imagePreview}
-                       alt="Image preview"
-                       width={400} 
-                       height={300} 
-                       style={{ objectFit: 'contain', width: '100%', height: 'auto', maxHeight: '300px' }} 
-                     />
-                  </div>
-               )}
-               {/* Add loading indicator during resize */} 
-               {isLoading && inputMode === 'image' && !imagePreview && (
-                  <div className="flex justify-center items-center h-20 text-gray-500">
-                     Processing image...
-                  </div>
-               )}
 
-               {/* --- Category Picker --- */}
-               {resizedImageData && ( // Show only after image is processed
-                 <div className="pt-4 border-t border-gray-100">
-                   <p className="block text-sm font-medium text-gray-700 mb-2 text-center">What's the vibe of your photo?</p>
-                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                     {categories.map((cat) => (
-                       <button
-                         key={cat.name}
-                         onClick={() => setImageCategory(cat.name)}
-                         className={`flex items-center justify-center space-x-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all duration-150 
-                           ${imageCategory === cat.name 
-                             ? 'border-transparent bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 text-white shadow-sm' 
-                             : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400'}`}
-                       >
-                         <span>{cat.emoji}</span>
-                         <span>{cat.name}</span>
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-               )}
-               {/* --- End Category Picker --- */}
-
-               {/* --- Keyword Input (Optional) --- */}
-               {resizedImageData && imageCategory && ( // Show only after image and category selected
-                 <div className="pt-4 border-t border-gray-100">
-                    <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
-                      ✨ Add Optional Keywords?
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">e.g., #BirthdayFun, Teamwork, Gourmet</p>
+            {/* Conditional Inputs */} 
+            {inputMode === 'text' ? (
+              // Text Input Fields 
+              <div className="space-y-4 pt-4">
+                <div>
+                  <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
+                    What is your caption about?
+                  </label>
+                  <input
+                    type="text"
+                    id="topic"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="e.g., sunny beach day, new product, coffee vibes"
+                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                    required
+                  />
+                </div>
+              </div>
+            ) : (
+               // Image Input Field & Category Picker & Keywords
+              <div className="space-y-4 pt-4">
+                 <div>
+                   <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                     Upload Image
+                   </label>
                    <input
-                     type="text"
-                     id="keywords"
-                     value={userKeywords}
-                     onChange={(e) => setUserKeywords(e.target.value)}
-                     placeholder="Type keywords here... 🎨"
-                     className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                     type="file"
+                     id="image-upload"
+                     accept="image/png, image/jpeg, image/webp" // Specify accepted types
+                     onChange={handleImageChange}
+                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-lime-50 file:text-lime-700 hover:file:bg-lime-100"
                    />
                  </div>
-               )}
-               {/* --- End Keyword Input --- */}
+                 {/* Image Preview */}
+                 {imagePreview && (
+                    <div className="mt-4 border rounded-md overflow-hidden bg-gray-100 flex justify-center items-center min-h-[200px]"> {/* Added styling */}
+                       <Image 
+                         src={imagePreview}
+                         alt="Image preview"
+                         width={400} 
+                         height={300} 
+                         style={{ objectFit: 'contain', width: '100%', height: 'auto', maxHeight: '300px' }} 
+                       />
+                    </div>
+                 )}
+                 {/* Add loading indicator during resize */} 
+                 {isLoading && inputMode === 'image' && !imagePreview && (
+                    <div className="flex justify-center items-center h-20 text-gray-500">
+                       Processing image...
+                    </div>
+                 )}
+
+                 {/* --- Category Picker --- */}
+                 {resizedImageData && ( // Show only after image is processed
+                   <div className="pt-4 border-t border-gray-100">
+                     <p className="block text-sm font-medium text-gray-700 mb-2 text-center">What's the vibe of your photo?</p>
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                       {categories.map((cat) => (
+                         <button
+                           key={cat.name}
+                           onClick={() => setImageCategory(cat.name)}
+                           className={`flex items-center justify-center space-x-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all duration-150 
+                             ${imageCategory === cat.name 
+                               ? 'border-transparent bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 text-white shadow-sm' 
+                               : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400'}`}
+                         >
+                           <span>{cat.emoji}</span>
+                           <span>{cat.name}</span>
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+                 {/* --- End Category Picker --- */}
+
+                 {/* --- Keyword Input (Optional) --- */}
+                 {resizedImageData && imageCategory && ( // Show only after image and category selected
+                   <div className="pt-4 border-t border-gray-100">
+                      <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
+                        ✨ Add Optional Keywords?
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">e.g., #BirthdayFun, Teamwork, Gourmet</p>
+                     <input
+                       type="text"
+                       id="keywords"
+                       value={userKeywords}
+                       onChange={(e) => setUserKeywords(e.target.value)}
+                       placeholder="Type keywords here... 🎨"
+                       className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                     />
+                   </div>
+                 )}
+                 {/* --- End Keyword Input --- */}
+              </div>
+            )}
+
+            {/* Common Fields: Platform & Tone */} 
+            <div className="space-y-4 border-t border-gray-200 pt-4">
+               {/* Platform Selection */}
+               <div>
+                 <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
+                   Platform
+                 </label>
+                 <select
+                   id="platform"
+                   value={platform}
+                   onChange={(e) => setPlatform(e.target.value)}
+                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+                 >
+                   <option>Instagram</option>
+                   <option>Twitter</option>
+                   <option>Facebook</option>
+                   <option>LinkedIn</option>
+                   <option>TikTok</option>
+                 </select>
+               </div>
+
+               {/* Tone Selection */}
+               <div>
+                 <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
+                   Tone
+                 </label>
+                 <select
+                   id="tone"
+                   value={tone}
+                   onChange={(e) => setTone(e.target.value)}
+                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+                 >
+                   <option>Casual</option>
+                   <option>Professional</option>
+                   <option>Energetic</option>
+                   <option>Witty</option>
+                   <option>Formal</option>
+                   <option>Friendly</option>
+                   <option>Humorous</option>
+                 </select>
+               </div>
             </div>
-          )}
 
-          {/* Common Fields: Platform & Tone */} 
-          <div className="space-y-4 border-t border-gray-200 pt-4">
-             {/* Platform Selection */}
-             <div>
-               <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
-                 Platform
-               </label>
-               <select
-                 id="platform"
-                 value={platform}
-                 onChange={(e) => setPlatform(e.target.value)}
-                 className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
-               >
-                 <option>Instagram</option>
-                 <option>Twitter</option>
-                 <option>Facebook</option>
-                 <option>LinkedIn</option>
-                 <option>TikTok</option>
-               </select>
-             </div>
-
-             {/* Tone Selection */}
-             <div>
-               <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
-                 Tone
-               </label>
-               <select
-                 id="tone"
-                 value={tone}
-                 onChange={(e) => setTone(e.target.value)}
-                 className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-lime-400 focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
-               >
-                 <option>Casual</option>
-                 <option>Professional</option>
-                 <option>Energetic</option>
-                 <option>Witty</option>
-                 <option>Formal</option>
-                 <option>Friendly</option>
-                 <option>Humorous</option>
-               </select>
-             </div>
+            {/* Generate Button - Gradient Background */}
+            <button
+              onClick={handleGenerateCaption} 
+              disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && (!resizedImageData || !imageCategory))}
+              className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
+            >
+              {isLoading ? (
+                 <> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating...</span> </> 
+              ) : (
+                 <> <SparklesIcon /> <span>Generate Caption</span> </> 
+              )}
+            </button>
           </div>
 
-          {/* Generate Button - Gradient Background */}
-          <button
-            onClick={handleGenerateCaption} 
-            disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && (!resizedImageData || !imageCategory))}
-            className="w-full bg-gradient-to-r from-lime-400 via-yellow-300 to-cyan-400 hover:from-lime-500 hover:via-yellow-400 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-full transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
-          >
-            {isLoading ? (
-               <> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating...</span> </> 
-            ) : (
-               <> <SparklesIcon /> <span>Generate Caption</span> </> 
+          {/* Output Section (Card 2) */}
+          {/* Adjusted width and removed fixed min-height */}
+          <div className="w-full lg:w-1/2 max-w-lg bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-lg font-semibold mb-3 text-gray-800">Generated Caption:</h3>
+            {isLoading && (
+              <div className="flex justify-center items-center h-20">
+                   <svg className="animate-spin h-6 w-6 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+            )} 
+            {error && (
+               <div className="text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                   <p><span className="font-medium">Error:</span> {error}</p>
+              </div>
             )}
-          </button>
-        </div>
+            {generatedCaption && !isLoading && !error && (
+              <p className="text-gray-700 whitespace-pre-wrap text-base break-words">{generatedCaption}</p> /* Added break-words */
+            )}
+            {!isLoading && !error && !generatedCaption && (
+              <p className="text-gray-400 italic">Your AI-generated caption will appear here once generated.</p>
+            )}
+          </div>
+          {/* --- End Output Section --- */}
 
-        {/* Output Section */}
-        <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md min-h-[150px]">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">Generated Caption:</h3>
-          {isLoading && (
-            <div className="flex justify-center items-center h-20">
-                 <svg className="animate-spin h-6 w-6 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            </div>
-          )} 
-          {error && (
-             <div className="text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                 <p><span className="font-medium">Error:</span> {error}</p>
-            </div>
-          )}
-          {generatedCaption && !isLoading && !error && (
-            <p className="text-gray-700 whitespace-pre-wrap text-base">{generatedCaption}</p>
-          )}
-          {!isLoading && !error && !generatedCaption && (
-            <p className="text-gray-400 italic">Your AI-generated caption will appear here once generated.</p>
-          )}
         </div>
+        {/* --- End Wrapper Div --- */}
 
       </main>
 
