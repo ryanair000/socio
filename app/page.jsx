@@ -767,13 +767,12 @@ export default function Home() {
 
              {/* Social Links */}
             <div className="flex items-center space-x-5">
-               {/* Added QybrrLabs Logo */}
+               {/* Moved QybrrLabs Logo Here */}
                <Image 
                  src="/logo.png" 
                  alt="QybrrLabs Logo" 
                  width={80} // Adjust width as needed
                  height={20} // Keep height similar to icons (h-5)
-                 className="mr-2" // Add some margin to the right
                />
                <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-accent-magenta transition-colors">
                   <FacebookIcon />
