@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../lib/supabase/client';
-import { EnvelopeIcon, LockClosedIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon, LockClosedIcon, DevicePhoneMobileIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 // --- Icon Placeholders ---
 const GoogleIcon = () => <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.386-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.85l3.251-3.108C18.237 1.51 15.478 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.809-4.617 11.809-11.996 0-.803-.074-1.592-.205-2.364H12.24z" fill="#4285F4"/><path d="m24.11 11.188-.105-.78h-11.76v4.36h6.805c-.275 1.766-2.057 5.18-6.805 5.18-4.096 0-7.44-3.386-7.44-7.574S8.145 4.667 7.44 4.667c2.33 0 3.892.99 4.785 1.85l3.25-3.108C18.238 1.51 15.48 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.81-4.616 11.81-11.995 0-.803-.074-1.593-.205-2.365z" fill="#34A853"/><path d="M12.24 4.667c2.33 0 3.892.99 4.785 1.85l3.25-3.108C18.238 1.51 15.48 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.81-4.616 11.81-11.995 0-.803-.074-1.593-.205-2.365H12.24V4.667z" fill="#FBBC05"/><path d="M24.11 11.188c-.13.77-.205 1.56-.205 2.365 0 7.38-5.05 11.995-11.81 11.995s-12.24-5.48-12.24-12.24 5.48-12.24 12.24-12.24c3.24 0 6.008 1.51 8.005 3.732L16.985 6.517c-.893-.86-2.455-1.85-4.745-1.85-4.096 0-7.44 3.386-7.44 7.574s3.344 7.574 7.44 7.574c4.75 0 6.53-3.41 6.805-5.18h-6.805v-4.36h11.865l.105.78z" fill="#EA4335"/></svg>;
@@ -162,8 +162,15 @@ export default function AuthPage() {
         <div className="w-full max-w-6xl h-full flex flex-col md:flex-row bg-white rounded-xl shadow-2xl overflow-hidden">
           
           {/* Left Column: Form */}
-          <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
-            <div className="flex items-center justify-center mb-6">
+          <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center relative">
+            <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10">
+              <Link href="/" className="flex items-center text-xs text-gray-500 hover:text-accent-magenta transition-colors">
+                <ArrowLeftIcon className="w-4 h-4 mr-1" />
+                Back to Home
+              </Link>
+            </div>
+
+            <div className="flex items-center justify-center mb-6 pt-8">
                  <Image 
                     src="/socio.png"
                     alt="Socio Logo"

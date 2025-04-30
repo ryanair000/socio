@@ -224,12 +224,13 @@ export default function CheckoutPage() {
                </div>
             )}
 
-            {/* --- Payment Options --- */} 
+            {/* --- Payment Options --- */}
             <div className="space-y-6">
-              {/* --- M-Pesa Section --- */}
-              <div className="border rounded-md p-4 space-y-3">
+              {/* --- M-Pesa Section - Commented Out --- */}
+              {/*
+              <div className="border rounded-md p-4 space-y-3 opacity-50">
                   <label htmlFor="mpesaPhone" className="flex items-center text-sm font-medium text-gray-700">
-                     <DevicePhoneMobileIcon className="w-5 h-5 mr-2 text-green-600" /> M-Pesa Payment
+                     <DevicePhoneMobileIcon className="w-5 h-5 mr-2 text-green-600" /> M-Pesa Payment (Currently Unavailable)
                   </label>
                   <input
                     type="tel"
@@ -237,33 +238,36 @@ export default function CheckoutPage() {
                     value={mpesaPhoneNumber}
                     onChange={(e) => setMpesaPhoneNumber(e.target.value)}
                     placeholder="07XX XXX XXX or 254..."
-                    disabled={isLoadingMpesa || isLoadingPaypal}
+                    disabled={true} // Always disabled
                     className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
                   />
-                  <button 
+                  <button
                     onClick={handleMpesaPayment}
-                    disabled={isLoadingMpesa || isLoadingPaypal || !mpesaPhoneNumber}
-                    className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={true} // Always disabled
+                    className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                     {isLoadingMpesa ? 'Processing...' : 'Pay with M-Pesa'}
+                     Pay with M-Pesa
                   </button>
-                  <p className="text-xs text-gray-500 text-center">You will receive an STK push to confirm.</p>
+                  <p className="text-xs text-gray-500 text-center">Temporarily unavailable.</p>
               </div>
+              */}
 
-              {/* Divider */}
+              {/* Divider - Optionally comment out if only PayPal remains */}
+              {/*
                <div className="relative my-4">
                  <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-gray-300" /></div>
                  <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or</span></div>
                </div>
+              */}
 
               {/* --- PayPal Section --- */}
               <div className="border rounded-md p-4">
-                  <button 
+                  <button
                     onClick={handlePaypalPayment}
-                    disabled={isLoadingPaypal || isLoadingMpesa} // Disable if either is loading
+                    disabled={isLoadingPaypal || isLoadingMpesa} // Keep isLoadingMpesa here in case we uncomment later
                     className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                      <CreditCardIcon className="w-5 h-5 mr-2" /> {/* Changed from PayPalIcon */} 
+                      <CreditCardIcon className="w-5 h-5 mr-2" />
                      {isLoadingPaypal ? 'Redirecting to PayPal...' : 'Pay with PayPal'}
                   </button>
                    <p className="text-xs text-gray-500 text-center mt-3">Securely pay using your PayPal account.</p>

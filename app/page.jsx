@@ -415,13 +415,13 @@ export default function Home() {
                 onClick={() => setInputMode('text')}
                 className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-accent-magenta text-accent-magenta' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                Describe Topic
+                💡 Idea to Caption
               </button>
               <button 
                 onClick={() => setInputMode('image')}
                 className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-accent-magenta text-accent-magenta' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                Upload Image
+                 📸 Photo to Caption
               </button>
             </div>
 
