@@ -82,12 +82,13 @@ export async function POST(request) {
         temperature: 0.65,
       };
     } else { // inputType === 'image'
-      const { platform, tone, category, keywords } = requestData.prompt;
+      const { platform, tone, category, keywords, name } = requestData.prompt;
       const { imageData } = requestData; // imageData is expected to be a Data URI (e.g., "data:image/jpeg;base64,...")
       modelToRun = IMAGE_MODEL_ID;
-      // ---> Conditionally add keywords to the prompt
+      // ---> Conditionally add keywords and name to the prompt
       let keywordInstruction = keywords ? ` Include keywords: ${keywords}.` : '';
-      promptForLlava = `Generate a ${platform} caption for this image, which is related to ${category}, in a ${tone} tone.${keywordInstruction} Focus on the main subject and action. Keep it concise.`;
+      let nameInstruction = name ? ` The subject's name is ${name}.` : ''; // Add name instruction
+      promptForLlava = `Generate a ${platform} caption for this image, which is related to ${category}, in a ${tone} tone.${nameInstruction}${keywordInstruction} Focus on the main subject and action. Keep it concise.`;
       console.log(`[IMAGE_MODE] Prompt: ${promptForLlava}`);
       replicateInput = {
         image: imageData,
