@@ -189,128 +189,66 @@ export default function AuthPage() {
                </div>
             )}
 
-            {/* OAuth Buttons - Use subtle gradient border on hover */}
-            <div className="space-y-2 mb-4">
-              <button disabled={loading} onClick={() => handleOAuthSignIn('google')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-gray-400 hover:bg-gray-50 transition duration-150 disabled:opacity-60">
-                 <GoogleIcon /> <span className="ml-2">Sign in with Google</span>
-              </button>
-              <button disabled={loading} onClick={() => handleOAuthSignIn('github')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-gray-400 hover:bg-gray-50 transition duration-150 disabled:opacity-60">
-                 <GithubIcon /> <span className="ml-2">Sign in with GitHub</span>
-              </button>
-              <button disabled={loading} onClick={() => handleOAuthSignIn('spotify')} className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:border-gray-400 hover:bg-gray-50 transition duration-150 disabled:opacity-60">
-                 <SpotifyIcon /> <span className="ml-2">Sign in with Spotify</span>
-              </button>
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-gray-300" /></div>
-              <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div>
-            </div>
-
-            {/* Auth Mode Toggle - Gradient background for active */} 
-            <div className="flex justify-center space-x-4 mb-4">
-                <button onClick={() => setAuthMode('email')} disabled={loading} className={`flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${authMode === 'email' ? 'bg-accent-orange text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-                  <EnvelopeIcon className="w-4 h-4 mr-1.5" /> Email
-                </button>
-                <button onClick={() => setAuthMode('phone')} disabled={loading} className={`flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${authMode === 'phone' ? 'bg-accent-orange text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-                  <DevicePhoneMobileIcon className="w-4 h-4 mr-1.5" /> Phone
-                </button>
-            </div>
-            
-            {/* Conditional Forms */} 
-            {authMode === 'email' && (
-              <form onSubmit={isLogin ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1"> Email </label>
-                  <div className="relative">
-                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                        <EnvelopeIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                     </div>
-                     <input
-                       id="email"
-                       name="email"
-                       type="email"
-                       autoComplete="email"
-                       required
-                       disabled={loading}
-                       value={email}
-                       onChange={(e) => setEmail(e.target.value)}
-                       className="w-full p-2.5 pl-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
-                     />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700"> Password </label>
-                    {isLogin && (
-                      <div className="text-sm">
-                        <a href="#" className="font-medium text-gray-600 hover:text-accent-orange transition-colors duration-150">
-                          Forgot password?
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                       <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                     </div>
-                     <input
-                       id="password"
-                       name="password"
-                       type="password"
-                       autoComplete={isLogin ? "current-password" : "new-password"}
-                       required
-                       disabled={loading}
-                       value={password}
-                       onChange={(e) => setPassword(e.target.value)}
-                       className="w-full p-2.5 pl-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
-                     />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-orange hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-orange transition-colors duration-150 disabled:opacity-60"
-                >
-                  {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Sign Up')}
-                </button>
-              </form>
-            )}
-
-            {authMode === 'phone' && (
-              <form onSubmit={handlePhoneSignIn} className="space-y-4">
-                <div>
-                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1"> Phone Number (e.g., +15551234567) </label>
-                   <div className="relative">
-                     <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                       <DevicePhoneMobileIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                     </div>
-                     <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      required disabled={loading}
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full p-2.5 pl-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
-                     />
+            {/* Email Form - Always shown now */}
+            <form onSubmit={isLogin ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1"> Email </label>
+                <div className="relative">
+                   <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
+                      <EnvelopeIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                    </div>
+                   <input
+                     id="email"
+                     name="email"
+                     type="email"
+                     autoComplete="email"
+                     required
+                     disabled={loading}
+                     value={email}
+                     onChange={(e) => setEmail(e.target.value)}
+                     className="w-full p-2.5 pl-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
+                   />
                 </div>
-                {/* Submit Button - Gradient Background */}
-                 <button
-                   type="submit"
-                   disabled={loading || otpSent}
-                   className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-orange hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-orange transition-colors duration-150 disabled:opacity-60"
-                 >
-                   {loading ? 'Sending OTP...' : 'Send OTP'}
-                 </button>
-              </form>
-            )}
-            
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700"> Password </label>
+                  {isLogin && (
+                    <div className="text-sm">
+                      <a href="#" className="font-medium text-gray-600 hover:text-accent-orange transition-colors duration-150">
+                        Forgot password?
+                      </a>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                   <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
+                     <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                   </div>
+                   <input
+                     id="password"
+                     name="password"
+                     type="password"
+                     autoComplete={isLogin ? "current-password" : "new-password"}
+                     required
+                     disabled={loading}
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
+                     className="w-full p-2.5 pl-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-orange focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-60"
+                   />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-orange hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-orange transition-colors duration-150 disabled:opacity-60"
+              >
+                {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Sign Up')}
+              </button>
+            </form>
+
             {/* Sign Up/Login Toggle - Gradient Text */}
             <div className="mt-6 text-center text-sm text-gray-600">
               {isLogin ? (
