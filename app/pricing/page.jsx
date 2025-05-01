@@ -19,7 +19,7 @@ import { CheckIcon } from '@heroicons/react/24/outline'; // Import actual Heroic
 const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" /></svg>;
 
 // --- Pricing Card Component (Simplified Inline Structure for Clarity) ---
-const PricingCard = ({ title, price, frequency, features, buttonText, buttonColor = 'bg-tripadvisor-green', CheckComponent = CheckIcon, isUnavailable = false, unavailableText = 'Coming Soon', onClick, isLoading = false, disabled = false, children }) => (
+const PricingCard = ({ title, price, frequency, features, buttonText, buttonColor = 'bg-accent-magenta', CheckComponent = CheckIcon, isUnavailable = false, unavailableText = 'Coming Soon', onClick, isLoading = false, disabled = false, children }) => (
   <div className={`bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col items-center text-center w-full max-w-sm transform transition-transform duration-300 hover:scale-[1.02] ${isUnavailable ? 'opacity-60' : ''}`}>
     {/* Placeholder for Image */}
     <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-6 flex items-center justify-center shadow-md">
@@ -27,7 +27,7 @@ const PricingCard = ({ title, price, frequency, features, buttonText, buttonColo
     </div>
 
     <h3 className="text-2xl font-semibold text-gray-800 mb-2">{title}</h3>
-    <p className={`text-xl font-medium mb-6 ${buttonColor === 'bg-orange-500' ? 'text-orange-600' : 'text-tripadvisor-green'}`}>
+    <p className={`text-xl font-medium mb-6 ${buttonColor === 'bg-orange-500' ? 'text-orange-600' : 'text-accent-magenta'}`}>
       {price}<span className="text-sm font-normal text-gray-500">{frequency}</span>
     </p>
 
