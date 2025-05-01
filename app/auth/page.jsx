@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../lib/supabase/client';
 import { EnvelopeIcon, LockClosedIcon, DevicePhoneMobileIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import toast, { Toaster } from 'react-hot-toast';
 
 // --- Icon Placeholders ---
 const GoogleIcon = () => <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.386-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.85l3.251-3.108C18.237 1.51 15.478 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.809-4.617 11.809-11.996 0-.803-.074-1.592-.205-2.364H12.24z" fill="#4285F4"/><path d="m24.11 11.188-.105-.78h-11.76v4.36h6.805c-.275 1.766-2.057 5.18-6.805 5.18-4.096 0-7.44-3.386-7.44-7.574S8.145 4.667 7.44 4.667c2.33 0 3.892.99 4.785 1.85l3.25-3.108C18.238 1.51 15.48 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.81-4.616 11.81-11.995 0-.803-.074-1.593-.205-2.365z" fill="#34A853"/><path d="M12.24 4.667c2.33 0 3.892.99 4.785 1.85l3.25-3.108C18.238 1.51 15.48 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c6.76 0 11.81-4.616 11.81-11.995 0-.803-.074-1.593-.205-2.365H12.24V4.667z" fill="#FBBC05"/><path d="M24.11 11.188c-.13.77-.205 1.56-.205 2.365 0 7.38-5.05 11.995-11.81 11.995s-12.24-5.48-12.24-12.24 5.48-12.24 12.24-12.24c3.24 0 6.008 1.51 8.005 3.732L16.985 6.517c-.893-.86-2.455-1.85-4.745-1.85-4.096 0-7.44 3.386-7.44 7.574s3.344 7.574 7.44 7.574c4.75 0 6.53-3.41 6.805-5.18h-6.805v-4.36h11.865l.105.78z" fill="#EA4335"/></svg>;
@@ -41,18 +42,18 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Sign Up
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
+  // --- Password Reset State ---
+  const [resetLoading, setResetLoading] = useState(false);
 
   // --- New State ---
   const [authMode, setAuthMode] = useState('email'); // 'email' or 'phone'
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpSent, setOtpSent] = useState(false); // To potentially show OTP input later
   const [currentUpdateIndex, setCurrentUpdateIndex] = useState(0); // State for updates
-  // --- End New State ---
 
   const handleOAuthSignIn = async (provider) => {
     setLoading(true);
-    setError(null);
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: provider,
@@ -64,7 +65,7 @@ export default function AuthPage() {
       // Redirect happens automatically via Supabase
     } catch (oauthError) {
       console.error(`OAuth Sign In Error (${provider}):`, oauthError);
-      setError(`Failed to sign in with ${provider}. ${oauthError.message || 'Please try again.'}`);
+      toast.error(`Failed to sign in with ${provider}. ${oauthError.message || 'Please try again.'}`);
       setLoading(false); // Only set loading false on error, success leads to redirect
     }
   };
@@ -72,17 +73,17 @@ export default function AuthPage() {
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
       if (signInError) throw signInError;
+      toast.success('Logged in successfully!');
       router.push('/'); // Redirect to home page on successful login
     } catch (signInError) {
       console.error('Sign In Error:', signInError);
-      setError(signInError.message || 'Invalid login credentials. Please try again.');
+      toast.error(signInError.message || 'Invalid login credentials. Please try again.');
       setLoading(false);
     }
   };
@@ -90,7 +91,6 @@ export default function AuthPage() {
   const handleEmailSignUp = async (e) => {
      e.preventDefault();
      setLoading(true);
-     setError(null);
      try {
         const { error: signUpError } = await supabase.auth.signUp({
           email: email,
@@ -101,22 +101,46 @@ export default function AuthPage() {
           },
         });
         if (signUpError) throw signUpError;
-        // Optionally, show a message asking the user to check their email for confirmation
-        alert('Sign up successful! Please check your email to confirm your account.');
+        toast.success('Sign up successful! Please check your email to confirm your account.', {
+          duration: 5000,
+        });
         setIsLogin(true); // Switch back to login view after successful signup prompt
      } catch (signUpError) {
        console.error('Sign Up Error:', signUpError);
-       setError(signUpError.message || 'Failed to sign up. Please try again.');
+       toast.error(signUpError.message || 'Failed to sign up. Please try again.');
      } finally {
        setLoading(false);
      }
   }
 
+  // --- Password Reset Handler ---
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error('Please enter your email address first.');
+      return;
+    }
+    setResetLoading(true);
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        // Optional: Specify where the user should be redirected after clicking the reset link
+        redirectTo: `${window.location.origin}/auth/update-password`, 
+      });
+      if (resetError) throw resetError;
+      toast.success('Password reset link sent! Please check your email.');
+    } catch (resetError) {
+      console.error('Password Reset Error:', resetError);
+      toast.error(resetError.message || 'Failed to send reset link. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+  // --- End Password Reset Handler ---
+
   // --- New Handler for Phone Sign In ---
   const handlePhoneSignIn = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     setOtpSent(false);
     try {
         // Make sure phone number is in E.164 format (e.g., +12223334444)
@@ -128,12 +152,12 @@ export default function AuthPage() {
         });
         if (otpError) throw otpError;
         setOtpSent(true); // Indicate OTP was sent
-        alert('OTP sent to your phone! Please verify.'); // Placeholder: Need UI for OTP entry
+        toast.success('OTP sent to your phone! Please verify.');
         // Here you would typically show an input field for the OTP 
         // and have another function to call supabase.auth.verifyOtp({ phone, token })
     } catch (otpError) {
         console.error('Phone Sign In Error:', otpError);
-        setError(otpError.message || 'Failed to send OTP. Check the phone number and try again.');
+        toast.error(otpError.message || 'Failed to send OTP. Check the phone number and try again.');
     } finally {
         setLoading(false);
     }
@@ -156,6 +180,28 @@ export default function AuthPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false} 
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#10B981',
+            },
+          },
+          error: {
+            style: {
+              background: '#EF4444',
+            },
+          },
+        }}
+      />
+      
       {/* Main Content */} 
       <div className="flex-grow flex items-center justify-center p-4 md:p-6">
         <div className="w-full max-w-6xl h-full flex flex-col md:flex-row bg-white rounded-xl shadow-2xl overflow-hidden">
@@ -179,15 +225,8 @@ export default function AuthPage() {
                  />
              </div>
             <h1 className="text-3xl font-extrabold mb-4 text-center text-accent-orange">
-              {isLogin ? 'Welcome Back!' : 'Create Your Account'} 
+              {isLogin ? 'Welcome Back!' : 'Start Crafting Amazing Captions'} 
             </h1>
-
-            {/* Error Display */}
-            {error && (
-               <div className="mb-3 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-sm">
-                  {error}
-               </div>
-            )}
 
             {/* Email Form - Always shown now */}
             <form onSubmit={isLogin ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
@@ -216,9 +255,14 @@ export default function AuthPage() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700"> Password </label>
                   {isLogin && (
                     <div className="text-sm">
-                      <a href="#" className="font-medium text-gray-600 hover:text-accent-orange transition-colors duration-150">
+                      <button 
+                        type="button" 
+                        onClick={handlePasswordReset}
+                        disabled={resetLoading || loading || !email}
+                        className="font-medium text-gray-600 hover:text-accent-orange transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
                         Forgot password?
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -272,8 +316,8 @@ export default function AuthPage() {
           {/* Right Column: Decorative/Info */}
           <div className="hidden md:flex w-1/2 relative overflow-hidden">
                <Image
-                    src="/social.avif"
-                    alt="Social media collage"
+                    src="/people.avif"
+                    alt="People using devices"
                     layout="fill"
                     objectFit="cover"
                     priority
