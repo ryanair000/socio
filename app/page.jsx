@@ -20,8 +20,13 @@ import {
   ArrowLeftOnRectangleIcon,
   ArrowRightOnRectangleIcon,
   CheckIcon as HeroCheckIcon,
+  BriefcaseIcon,
+  MegaphoneIcon,
+  LightBulbIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 
 // Simple Check Icon for Pricing Section
 const CheckIcon = () => <HeroCheckIcon className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />;
@@ -419,13 +424,222 @@ export default function Home() {
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
         {/* Main Heading */}
         <div className="text-center mb-10 md:mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-accent-magenta mb-2">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} // Start hidden and slightly down
+            animate={{ opacity: 1, y: 0 }} // Animate to visible and original position
+            transition={{ duration: 0.6, ease: "easeOut" }} // Animation duration and easing
+            className="text-4xl md:text-5xl font-extrabold text-accent-magenta mb-2"
+          >
              🎨 Snap, Caption, Share!
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }} // Add a small delay
+            className="text-lg text-gray-600 max-w-2xl mx-auto"
+          >
              Generate captivating social media captions from your text ideas or photos in seconds.
-          </p>
+          </motion.p>
         </div>
+
+        {/* --- NEW: Use Cases Section --- */}
+        <section className="mb-16 md:mb-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-semibold text-gray-800 mb-3">Ignite Your Content <span className="text-accent-magenta">Instantly</span></h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Whether you're boosting your brand or sharing personal moments, Socio crafts the perfect message.
+            </p>
+          </div>
+
+          {/* Define animation variants */}
+          {(() => {
+            const listVariants = {
+              visible: { 
+                opacity: 1,
+                transition: { 
+                  when: "beforeChildren", 
+                  staggerChildren: 0.15, // Stagger delay between children
+                  ease: "easeOut",
+                  duration: 0.5
+                }
+              },
+              hidden: { 
+                opacity: 0,
+                transition: { 
+                  when: "afterChildren" 
+                }
+              }
+            };
+
+            const itemVariants = {
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+              hidden: { opacity: 0, y: 30 } // Start slightly down
+            };
+
+            return (
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                variants={listVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }} // Trigger once when 20% is visible
+              >
+                {/* Use Case 1: Social Media Managers */}
+                <motion.div 
+                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
+                  variants={itemVariants}
+                >
+                  <BuildingOfficeIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Social Media Pros</h3>
+                  <p className="text-sm text-gray-600">Streamline workflows and maintain a consistent brand voice across all platforms with AI-powered efficiency.</p>
+                </motion.div>
+
+                {/* Use Case 2: Small Business Owners */}
+                <motion.div 
+                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
+                  variants={itemVariants}
+                >
+                  <BriefcaseIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Business Owners</h3>
+                  <p className="text-sm text-gray-600">Effortlessly create engaging posts to promote products, announce news, and connect with your customers.</p>
+                </motion.div>
+
+                {/* Use Case 3: Creators & Bloggers */}
+                <motion.div 
+                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
+                  variants={itemVariants}
+                >
+                  <LightBulbIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Creators & Influencers</h3>
+                  <p className="text-sm text-gray-600">Beat writer's block and generate fresh, attention-grabbing captions for your photos, videos, and articles.</p>
+                </motion.div>
+
+                {/* Use Case 4: Personal Use */}
+                <motion.div 
+                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
+                  variants={itemVariants}
+                >
+                  <UserCircleIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Everyday Sharers</h3>
+                  <p className="text-sm text-gray-600">Quickly craft fun and fitting captions for sharing life's moments, from travel snaps to party pics.</p>
+                </motion.div>
+                
+                {/* Optional: Add more use cases like Marketing Agencies, Event Planners etc. */}
+              </motion.div>
+            );
+          })()}
+        </section>
+        {/* --- END: Use Cases Section --- */}
+
+        {/* --- NEW: Estimated Growth Section --- */}
+        <section className="bg-gradient-to-b from-gray-50 to-white py-16 md:py-24 px-4 md:px-8">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-semibold text-gray-800 mb-3">Unlock Growth with Better Captions</h2>
+            <p className="text-lg text-gray-600">
+              See the potential difference! Engaging captions can significantly boost your visibility and connection. 
+              <span className="block text-sm mt-1">(Illustrative examples based on improved content quality)</span>
+            </p>
+          </div>
+
+          {/* Define animation variants for this section */}
+          {(() => {
+            const listVariants = { // For staggering the two cards
+              visible: { opacity: 1, transition: { when: "beforeChildren", staggerChildren: 0.2 } },
+              hidden: { opacity: 0 }
+            };
+            const cardItemVariants = { // For fading in each card container
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+              hidden: { opacity: 0, y: 20 }
+            };
+            const barVariants = (delay = 0) => ({ // For scaling the bars
+              visible: { opacity: 1, scaleY: 1, transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1], delay: delay + 0.3 } }, // Delay based on card stagger + own delay
+              hidden: { opacity: 0, scaleY: 0 }
+            });
+            const textVariants = (delay = 0) => ({ // For fading in the text
+              visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut", delay: delay + 0.8 } }, // Delay after bars finish
+              hidden: { opacity: 0, y: 10 }
+            });
+
+            return (
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-3xl mx-auto"
+                variants={listVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+              >
+                {/* Follower Growth Chart */}
+                <motion.div 
+                  className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
+                  variants={cardItemVariants}
+                >
+                  <h3 className="flex items-center text-xl font-semibold mb-6 text-gray-700">
+                    <ArrowTrendingUpIcon className="w-6 h-6 mr-2 text-green-500" />
+                    Estimated Follower Growth
+                  </h3>
+                  <div className="flex justify-around items-end h-40 space-x-4">
+                    {/* Without Socio Bar */}
+                    <div className="text-center flex flex-col justify-end items-center">
+                      <motion.p variants={textVariants(0)} className="text-2xl font-bold text-gray-500 mb-1">+15%</motion.p>
+                      <motion.div 
+                        className="w-16 h-16 bg-gray-300 rounded-t-md origin-bottom" 
+                        title="Typical Growth"
+                        variants={barVariants(0)}
+                      ></motion.div>
+                      <p className="text-xs text-gray-500 mt-2">Typical</p>
+                    </div>
+                    {/* With Socio Bar */}
+                    <div className="text-center flex flex-col justify-end items-center">
+                      <motion.p variants={textVariants(0.1)} className="text-3xl font-bold text-accent-magenta mb-1">+45%</motion.p>
+                      <motion.div 
+                        className="w-16 h-32 bg-accent-magenta rounded-t-md shadow-lg origin-bottom" 
+                        title="With Socio Captions"
+                        variants={barVariants(0.1)} // Slightly delay this bar
+                      ></motion.div>
+                      <p className="text-xs text-accent-magenta font-semibold mt-2">With Socio</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-6 text-center">Reach more people with captions that resonate.</p>
+                </motion.div>
+
+                {/* Engagement Rate Chart */}
+                <motion.div 
+                  className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
+                  variants={cardItemVariants}
+                >
+                  <h3 className="flex items-center text-xl font-semibold mb-6 text-gray-700">
+                    <ArrowTrendingUpIcon className="w-6 h-6 mr-2 text-blue-500" />
+                    Estimated Engagement Rate
+                  </h3>
+                  <div className="flex justify-around items-end h-40 space-x-4">
+                    {/* Without Socio Bar */}
+                    <div className="text-center flex flex-col justify-end items-center">
+                      <motion.p variants={textVariants(0)} className="text-2xl font-bold text-gray-500 mb-1">2.5%</motion.p>
+                      <motion.div 
+                        className="w-16 h-12 bg-gray-300 rounded-t-md origin-bottom" 
+                        title="Average Engagement"
+                        variants={barVariants(0)}
+                      ></motion.div>
+                      <p className="text-xs text-gray-500 mt-2">Average</p>
+                    </div>
+                    {/* With Socio Bar */}
+                    <div className="text-center flex flex-col justify-end items-center">
+                       <motion.p variants={textVariants(0.1)} className="text-3xl font-bold text-accent-magenta mb-1">6.0%</motion.p>
+                       <motion.div 
+                         className="w-16 h-28 bg-accent-magenta rounded-t-md shadow-lg origin-bottom" 
+                         title="With Socio Captions"
+                         variants={barVariants(0.1)} // Slightly delay this bar
+                       ></motion.div>
+                      <p className="text-xs text-accent-magenta font-semibold mt-2">With Socio</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-6 text-center">Spark more likes, comments, and shares.</p>
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+        </section>
+        {/* --- END: Estimated Growth Section --- */}
         
         {/* --- NEW: Usage Info Display --- */}
         {userProfile && !loadingProfile && (
@@ -721,53 +935,82 @@ export default function Home() {
             Choose the plan that best fits your needs. More details on our <Link href="/pricing" className="text-accent-magenta hover:underline">pricing page</Link>.
           </p>
 
-          {/* Pricing Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Free Plan Card */}
-            <div className="border border-gray-200 rounded-lg p-6 flex flex-col items-center">
-              <h3 className="text-xl font-semibold mb-2 text-gray-700">Free</h3>
-              <p className="text-3xl font-bold text-accent-magenta mb-4">$0<span className="text-sm font-normal text-gray-500">/month</span></p>
-              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
-                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.text} Text Generations</li>
-                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
-                <li className="flex items-center"><CheckIcon /> Basic Support</li>
-              </ul>
-              <Link href="/auth" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
-                Get Started
-              </Link>
-            </div>
+          {/* Pricing Grid - Animate */}
+          {(() => {
+            // Define animation variants locally
+            const listVariants = {
+              visible: { opacity: 1, transition: { when: "beforeChildren", staggerChildren: 0.15, ease: "easeOut", duration: 0.5 } },
+              hidden: { opacity: 0, transition: { when: "afterChildren" } }
+            };
+            const itemVariants = {
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+              hidden: { opacity: 0, y: 30 }
+            };
 
-            {/* Basic Plan Card (Example) */}
-            <div className="border border-accent-magenta rounded-lg p-6 flex flex-col items-center shadow-lg relative">
-              <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent-magenta text-white text-xs font-bold px-3 py-1 rounded-full">Popular</span>
-              <h3 className="text-xl font-semibold mb-2 text-gray-700">Basic</h3>
-              <p className="text-3xl font-bold text-accent-magenta mb-4">$9<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */} 
-              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
-                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.text} Text Generations</li>
-                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.image} Image Generations</li>
-                <li className="flex items-center"><CheckIcon /> Priority Support</li>
-                <li className="flex items-center"><CheckIcon /> More Tone Options</li>
-              </ul>
-              <Link href="/pricing" className="mt-auto w-full text-center bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-150">
-                Choose Basic
-              </Link>
-            </div>
+            return (
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-3 gap-8"
+                variants={listVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }} // Trigger once when 20% visible
+              >
+                {/* Free Plan Card */}
+                <motion.div 
+                  className="border border-gray-200 rounded-lg p-6 flex flex-col items-center transition-all duration-200 hover:scale-[1.03] hover:shadow-lg" // Added transition/hover
+                  variants={itemVariants}
+                >
+                  <h3 className="text-xl font-semibold mb-2 text-gray-700">Free</h3>
+                  <p className="text-3xl font-bold text-accent-magenta mb-4">$0<span className="text-sm font-normal text-gray-500">/month</span></p>
+                  <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.text} Text Generations</li>
+                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
+                    <li className="flex items-center"><CheckIcon /> Basic Support</li>
+                  </ul>
+                  <Link href="/auth" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
+                    Get Started
+                  </Link>
+                </motion.div>
 
-            {/* Pro Plan Card (Example) */}
-            <div className="border border-gray-200 rounded-lg p-6 flex flex-col items-center">
-              <h3 className="text-xl font-semibold mb-2 text-gray-700">Pro</h3>
-              <p className="text-3xl font-bold text-accent-magenta mb-4">$29<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */}
-              <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
-                <li className="flex items-center"><CheckIcon /> Unlimited Text Generations</li>
-                <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.pro.image} Image Generations</li>
-                <li className="flex items-center"><CheckIcon /> Dedicated Support</li>
-                <li className="flex items-center"><CheckIcon /> Early Access Features</li>
-              </ul>
-              <Link href="/pricing" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
-                Choose Pro
-              </Link>
-            </div>
-          </div>
+                {/* Basic Plan Card (Example) */}
+                <motion.div 
+                  className="border border-accent-magenta rounded-lg p-6 flex flex-col items-center shadow-lg relative transition-all duration-200 hover:scale-[1.03] hover:shadow-xl" // Added transition/hover
+                  variants={itemVariants}
+                >
+                  <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent-magenta text-white text-xs font-bold px-3 py-1 rounded-full">Popular</span>
+                  <h3 className="text-xl font-semibold mb-2 text-gray-700">Basic</h3>
+                  <p className="text-3xl font-bold text-accent-magenta mb-4">$9<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */} 
+                  <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.text} Text Generations</li>
+                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.image} Image Generations</li>
+                    <li className="flex items-center"><CheckIcon /> Priority Support</li>
+                    <li className="flex items-center"><CheckIcon /> More Tone Options</li>
+                  </ul>
+                  <Link href="/pricing" className="mt-auto w-full text-center bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-150">
+                    Choose Basic
+                  </Link>
+                </motion.div>
+
+                {/* Pro Plan Card (Example) */}
+                <motion.div 
+                  className="border border-gray-200 rounded-lg p-6 flex flex-col items-center transition-all duration-200 hover:scale-[1.03] hover:shadow-lg" // Added transition/hover
+                  variants={itemVariants}
+                >
+                  <h3 className="text-xl font-semibold mb-2 text-gray-700">Pro</h3>
+                  <p className="text-3xl font-bold text-accent-magenta mb-4">$29<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */}
+                  <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
+                    <li className="flex items-center"><CheckIcon /> Unlimited Text Generations</li>
+                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.pro.image} Image Generations</li>
+                    <li className="flex items-center"><CheckIcon /> Dedicated Support</li>
+                    <li className="flex items-center"><CheckIcon /> Early Access Features</li>
+                  </ul>
+                  <Link href="/pricing" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
+                    Choose Pro
+                  </Link>
+                </motion.div>
+              </motion.div>
+            );
+          })()}
         </div>
       </section>
       {/* --- End Simple Pricing Overview Section --- */}
