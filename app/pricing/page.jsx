@@ -19,24 +19,32 @@ import { CheckIcon } from '@heroicons/react/24/outline'; // Import actual Heroic
 const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" /></svg>;
 
 // --- Pricing Card Component (Simplified Inline Structure for Clarity) ---
-const PricingCard = ({ title, price, frequency, features, buttonText, buttonColor = 'bg-accent-magenta', CheckComponent = CheckIcon, isUnavailable = false, unavailableText = 'Coming Soon', onClick, isLoading = false, disabled = false, children }) => (
-  <div className={`bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col items-center text-center w-full max-w-sm transform transition-transform duration-300 hover:scale-[1.02] ${isUnavailable ? 'opacity-60' : ''}`}>
-    {/* Placeholder for Image */}
-    <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-6 flex items-center justify-center shadow-md">
+const PricingCard = ({ title, price, frequency, features, buttonText, buttonColor = 'bg-gray-800', CheckComponent = CheckIcon, isUnavailable = false, unavailableText = 'Coming Soon', onClick, isLoading = false, disabled = false, children, isFeatured = false, description = '' }) => (
+  <div className={`bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col items-center text-center w-full max-w-sm transform transition-transform duration-300 hover:scale-[1.02] ${isUnavailable ? 'opacity-60' : ''} ${isFeatured ? 'border-2 border-accent' : 'border border-gray-200'} relative`}>
+    {/* Popular Badge */}
+    {isFeatured && (
+      <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">
+        MOST POPULAR
+      </span>
+    )}
+    {/* Placeholder for Image (Optional, can be removed or customized) */}
+    {/* <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-6 flex items-center justify-center shadow-md">
         <div className={`w-10 h-10 rounded-full ${buttonColor} opacity-30`}></div> 
-    </div>
+    </div> */}
 
-    <h3 className="text-2xl font-semibold text-gray-800 mb-2">{title}</h3>
-    <p className={`text-xl font-medium mb-6 ${buttonColor === 'bg-orange-500' ? 'text-orange-600' : 'text-accent-magenta'}`}>
-      {price}<span className="text-sm font-normal text-gray-500">{frequency}</span>
+    <h3 className="text-2xl font-semibold text-gray-800 mb-2 mt-4">{title}</h3> {/* Added margin-top if badge exists */} 
+    <p className="text-sm text-gray-500 mb-4 min-h-[40px]">{description}</p> {/* Added description */} 
+    <p className={`text-4xl font-bold mb-1 ${isFeatured ? 'text-accent' : 'text-gray-800'}`}>
+      {price}
     </p>
+    <p className="text-sm font-normal text-gray-500 mb-6">{frequency}</p>
 
     {!isUnavailable ? (
       <>
         <button 
           onClick={onClick} 
           disabled={disabled || isLoading} // Disable if globally disabled or this card is loading
-          className={`w-full py-3 px-6 rounded-full text-white font-semibold text-sm ${buttonColor} hover:opacity-90 transition mb-8 shadow-md disabled:opacity-70 disabled:cursor-not-allowed`}
+          className={`w-full py-3 px-6 rounded-md text-white font-semibold text-sm ${isFeatured ? 'bg-accent hover:bg-accent-dark' : 'bg-gray-800 hover:bg-gray-700'} transition mb-6 shadow-md disabled:opacity-70 disabled:cursor-not-allowed`}
          >
           {isLoading ? 'Processing...' : buttonText} {/* Show loading text */} 
         </button>
@@ -44,7 +52,7 @@ const PricingCard = ({ title, price, frequency, features, buttonText, buttonColo
           {features.map((feature, index) => (
             <li key={index} className="flex items-start">
               <CheckComponent className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" />
-              <span className="ml-2">{feature}</span>
+              <span className="ml-1">{feature}</span> {/* Adjusted margin */} 
             </li>
           ))}
         </ul>
@@ -163,28 +171,14 @@ export default function PricingPage() {
       textGenerations: '10 generations/month',
       imageGenerations: '5 generations/month',
       features: [
-        'Basic themes (party, kitchen)',
+        '50 Text Generations/month',
+        '30 Image Generations/month',
         'Standard caption quality',
-        'Watermarked outputs or ads',
+        'Basic themes & tone control',
+        'Community support'
       ],
       cta: 'Sign Up for Free',
       ctaLink: '/auth',
-      isFeatured: false,
-    },
-    {
-      name: 'Basic',
-      priceMonthly: 500,
-      priceSuffix: 'KSH/month',
-      description: 'Ideal for individuals and small projects.',
-      textGenerations: '100/month',
-      imageGenerations: '50/month',
-      features: [
-        'Advanced themes (ads, office)',
-        'Keyword customization',
-        'No ads/watermarks',
-      ],
-      cta: 'Choose Basic',
-      ctaLink: '/auth', // Should eventually go to checkout/upgrade page
       isFeatured: false,
     },
     {
@@ -202,8 +196,8 @@ export default function PricingPage() {
         '(Get 2 months free with annual plan!)'
       ],
       cta: 'Choose Pro',
-      ctaLink: '/auth', // Should eventually go to checkout/upgrade page
-      isFeatured: true, // Highlight this plan
+      ctaLink: '/checkout/pro',
+      isFeatured: true,
     },
     {
       name: 'Business',
@@ -219,7 +213,7 @@ export default function PricingPage() {
         'Highest priority support'
       ],
       cta: 'Choose Business',
-      ctaLink: '/auth', // Should eventually go to checkout/upgrade page
+      ctaLink: '/checkout/business',
       isFeatured: false,
     },
   ];

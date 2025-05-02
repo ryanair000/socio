@@ -27,6 +27,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import CreditTopUpPopup from '../components/CreditTopUpPopup'
 
 // Simple Check Icon for Pricing Section
 const CheckIcon = () => <HeroCheckIcon className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />;
@@ -104,10 +105,17 @@ function resizeImage(file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
 // --- NEW: Plan Limits (for display) ---
 // Match the limits defined in the API route
 const PLAN_LIMITS = {
-  free: { text: 10, image: 5 },
-  basic: { text: 100, image: 50 },
+  // Free plan now represents the post-signup limits
+  free: { text: 50, image: 30 },
+  // Basic plan is removed, Pro/Business remain
   pro: { text: Infinity, image: 200 },
   business: { text: Infinity, image: 500 },
+};
+
+// Define trial limits separately for ungated access
+const TRIAL_LIMITS = {
+  text: 20,
+  image: 10,
 };
 
 export default function Home() {
@@ -139,6 +147,30 @@ export default function Home() {
   // --- NEW: User Profile State ---
   const [userProfile, setUserProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // --- NEW: State for ungated trial usage ---
+  const [trialTextUsed, setTrialTextUsed] = useState(0);
+  const [trialImageUsed, setTrialImageUsed] = useState(0);
+
+  // --- NEW: State for Top-Up Popup ---
+  const [showTopUpPopup, setShowTopUpPopup] = useState(false);
+
+  // --- Load trial usage from localStorage on mount ---
+  useEffect(() => {
+    const savedText = localStorage.getItem('socioTrialTextUsed');
+    const savedImage = localStorage.getItem('socioTrialImageUsed');
+    if (savedText) setTrialTextUsed(parseInt(savedText, 10) || 0);
+    if (savedImage) setTrialImageUsed(parseInt(savedImage, 10) || 0);
+  }, []);
+
+  // --- Save trial usage to localStorage when it changes ---
+  useEffect(() => {
+    localStorage.setItem('socioTrialTextUsed', trialTextUsed.toString());
+  }, [trialTextUsed]);
+
+  useEffect(() => {
+    localStorage.setItem('socioTrialImageUsed', trialImageUsed.toString());
+  }, [trialImageUsed]);
 
   // --- Fetch User Profile on Mount ---
   useEffect(() => {
@@ -270,6 +302,45 @@ export default function Home() {
     setError(null);
     setGeneratedCaption('');
 
+    // --- NEW: Check ungated trial limits if user is not logged in ---
+    if (!userProfile) {
+      if (inputMode === 'text' && trialTextUsed >= TRIAL_LIMITS.text) {
+        setError({ message: `You've used your ${TRIAL_LIMITS.text} free text generations. Please sign up to continue.`, isSignupPrompt: true });
+        setIsLoading(false);
+        return;
+      }
+      if (inputMode === 'image' && trialImageUsed >= TRIAL_LIMITS.image) {
+        setError({ message: `You've used your ${TRIAL_LIMITS.image} free image generations. Please sign up to continue.`, isSignupPrompt: true });
+        setIsLoading(false);
+        return;
+      }
+    }
+    // --- END NEW ---
+
+    // --- NEW: Check for low credits on free plan BEFORE API call ---
+    const LOW_TEXT_THRESHOLD = 3; // Show popup if text credits <= this
+    const LOW_IMAGE_THRESHOLD = 1; // Show popup if image credits <= this
+
+    if (userProfile && userProfile.plan === 'free' && !userProfile.userOnly) {
+        const textCreditsLeft = (userProfile.limits.text ?? 0) - (userProfile.monthly_text_generations_used ?? 0);
+        const imageCreditsLeft = (userProfile.limits.image ?? 0) - (userProfile.monthly_image_generations_used ?? 0);
+
+        if (inputMode === 'text' && textCreditsLeft <= LOW_TEXT_THRESHOLD) {
+            setShowTopUpPopup(true);
+            // Optional: Prevent generation if you want popup to block
+            // setError({ message: "You are low on text credits. Please top up.", isLimitError: true });
+            // setIsLoading(false);
+            // return;
+        } else if (inputMode === 'image' && imageCreditsLeft <= LOW_IMAGE_THRESHOLD) {
+            setShowTopUpPopup(true);
+            // Optional: Prevent generation if you want popup to block
+            // setError({ message: "You are low on image credits. Please top up.", isLimitError: true });
+            // setIsLoading(false);
+            // return;
+        }
+    }
+    // --- END NEW CREDIT CHECK ---
+
     let requestBody = {};
 
     if (inputMode === 'text') {
@@ -337,6 +408,16 @@ export default function Home() {
       
       setGeneratedCaption(finalCaption); 
 
+      // --- NEW: Increment trial counter if not logged in ---
+      if (!userProfile) {
+        if (inputMode === 'text') {
+          setTrialTextUsed(prev => prev + 1);
+        } else if (inputMode === 'image') {
+          setTrialImageUsed(prev => prev + 1);
+        }
+      }
+      // --- END NEW ---
+
     } catch (err) {
       console.error("API call failed:", err);
       // Modify error state based on whether it's a limit error
@@ -374,6 +455,18 @@ export default function Home() {
       }
   };
 
+  // --- NEW: Function to close the popup ---
+  const handleClosePopup = () => {
+    setShowTopUpPopup(false);
+  };
+
+  // --- NEW: Placeholder for purchase action (closes popup for now) ---
+  const handlePurchaseClick = () => {
+    // TODO: Implement actual purchase logic (e.g., redirect to checkout)
+    console.log("Purchase button clicked - initiating purchase flow...");
+    handleClosePopup(); // Close the popup after clicking purchase
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
        {/* Header */}
@@ -392,9 +485,9 @@ export default function Home() {
 
           {/* Navigation */}
           <nav className="flex items-center space-x-4 md:space-x-6">
-             <Link href="/" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Home</Link>
-             <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Pricing</Link>
-             <Link href="/support" className="text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">Support</Link>
+             <Link href="/" className="text-sm font-medium text-gray-600 hover:text-accent transition-colors">Home</Link>
+             <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-accent transition-colors">Pricing</Link>
+             <Link href="/support" className="text-sm font-medium text-gray-600 hover:text-accent transition-colors">Support</Link>
 
              {/* Auth Link/Button */}
              <div className="border-l border-gray-200 pl-4 md:pl-6">
@@ -404,13 +497,13 @@ export default function Home() {
                 <button
                   onClick={handleLogout}
                   disabled={isLoading}
-                  className="flex items-center text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors disabled:opacity-50"
+                  className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
                  >
                   <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
                   Logout
                  </button>
               ) : (
-                 <Link href="/auth" className="flex items-center text-sm font-medium text-gray-600 hover:text-accent-magenta transition-colors">
+                 <Link href="/auth" className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors">
                     <ArrowRightOnRectangleIcon className="w-5 h-5 mr-1" />
                     Login / Sign Up
                  </Link>
@@ -428,7 +521,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }} // Start hidden and slightly down
             animate={{ opacity: 1, y: 0 }} // Animate to visible and original position
             transition={{ duration: 0.6, ease: "easeOut" }} // Animation duration and easing
-            className="text-4xl md:text-5xl font-extrabold text-accent-magenta mb-2"
+            className="text-4xl md:text-5xl font-extrabold text-accent mb-2"
           >
              🎨 Snap, Caption, Share!
           </motion.h1>
@@ -442,247 +535,6 @@ export default function Home() {
           </motion.p>
         </div>
 
-        {/* --- NEW: Use Cases Section --- */}
-        <section className="mb-16 md:mb-24">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-3">Ignite Your Content <span className="text-accent-magenta">Instantly</span></h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Whether you're boosting your brand or sharing personal moments, Socio crafts the perfect message.
-            </p>
-          </div>
-
-          {/* Define animation variants */}
-          {(() => {
-            const listVariants = {
-              visible: { 
-                opacity: 1,
-                transition: { 
-                  when: "beforeChildren", 
-                  staggerChildren: 0.15, // Stagger delay between children
-                  ease: "easeOut",
-                  duration: 0.5
-                }
-              },
-              hidden: { 
-                opacity: 0,
-                transition: { 
-                  when: "afterChildren" 
-                }
-              }
-            };
-
-            const itemVariants = {
-              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-              hidden: { opacity: 0, y: 30 } // Start slightly down
-            };
-
-            return (
-              <motion.div 
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-                variants={listVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }} // Trigger once when 20% is visible
-              >
-                {/* Use Case 1: Social Media Managers */}
-                <motion.div 
-                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
-                  variants={itemVariants}
-                >
-                  <BuildingOfficeIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
-                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Social Media Pros</h3>
-                  <p className="text-sm text-gray-600">Streamline workflows and maintain a consistent brand voice across all platforms with AI-powered efficiency.</p>
-                </motion.div>
-
-                {/* Use Case 2: Small Business Owners */}
-                <motion.div 
-                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
-                  variants={itemVariants}
-                >
-                  <BriefcaseIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
-                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Business Owners</h3>
-                  <p className="text-sm text-gray-600">Effortlessly create engaging posts to promote products, announce news, and connect with your customers.</p>
-                </motion.div>
-
-                {/* Use Case 3: Creators & Bloggers */}
-                <motion.div 
-                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
-                  variants={itemVariants}
-                >
-                  <LightBulbIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
-                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Creators & Influencers</h3>
-                  <p className="text-sm text-gray-600">Beat writer's block and generate fresh, attention-grabbing captions for your photos, videos, and articles.</p>
-                </motion.div>
-
-                {/* Use Case 4: Personal Use */}
-                <motion.div 
-                  className="text-center p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-105" // Added transitions & hover
-                  variants={itemVariants}
-                >
-                  <UserCircleIcon className="w-10 h-10 mx-auto mb-4 text-accent-magenta" />
-                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Everyday Sharers</h3>
-                  <p className="text-sm text-gray-600">Quickly craft fun and fitting captions for sharing life's moments, from travel snaps to party pics.</p>
-                </motion.div>
-                
-                {/* Optional: Add more use cases like Marketing Agencies, Event Planners etc. */}
-              </motion.div>
-            );
-          })()}
-        </section>
-        {/* --- END: Use Cases Section --- */}
-
-        {/* --- NEW: Estimated Growth Section --- */}
-        <section className="bg-gradient-to-b from-gray-50 to-white py-16 md:py-24 px-4 md:px-8">
-          <div className="max-w-4xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-3">Unlock Growth with Better Captions</h2>
-            <p className="text-lg text-gray-600">
-              See the potential difference! Engaging captions can significantly boost your visibility and connection. 
-              <span className="block text-sm mt-1">(Illustrative examples based on improved content quality)</span>
-            </p>
-          </div>
-
-          {/* Define animation variants for this section */}
-          {(() => {
-            const listVariants = { // For staggering the two cards
-              visible: { opacity: 1, transition: { when: "beforeChildren", staggerChildren: 0.2 } },
-              hidden: { opacity: 0 }
-            };
-            const cardItemVariants = { // For fading in each card container
-              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-              hidden: { opacity: 0, y: 20 }
-            };
-            const barVariants = (delay = 0) => ({ // For scaling the bars
-              visible: { opacity: 1, scaleY: 1, transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1], delay: delay + 0.3 } }, // Delay based on card stagger + own delay
-              hidden: { opacity: 0, scaleY: 0 }
-            });
-            const textVariants = (delay = 0) => ({ // For fading in the text
-              visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut", delay: delay + 0.8 } }, // Delay after bars finish
-              hidden: { opacity: 0, y: 10 }
-            });
-
-            return (
-              <motion.div 
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-3xl mx-auto"
-                variants={listVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-              >
-                {/* Follower Growth Chart */}
-                <motion.div 
-                  className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
-                  variants={cardItemVariants}
-                >
-                  <h3 className="flex items-center text-xl font-semibold mb-6 text-gray-700">
-                    <ArrowTrendingUpIcon className="w-6 h-6 mr-2 text-green-500" />
-                    Estimated Follower Growth
-                  </h3>
-                  <div className="flex justify-around items-end h-40 space-x-4">
-                    {/* Without Socio Bar */}
-                    <div className="text-center flex flex-col justify-end items-center">
-                      <motion.p variants={textVariants(0)} className="text-2xl font-bold text-gray-500 mb-1">+15%</motion.p>
-                      <motion.div 
-                        className="w-16 h-16 bg-gray-300 rounded-t-md origin-bottom" 
-                        title="Typical Growth"
-                        variants={barVariants(0)}
-                      ></motion.div>
-                      <p className="text-xs text-gray-500 mt-2">Typical</p>
-                    </div>
-                    {/* With Socio Bar */}
-                    <div className="text-center flex flex-col justify-end items-center">
-                      <motion.p variants={textVariants(0.1)} className="text-3xl font-bold text-accent-magenta mb-1">+45%</motion.p>
-                      <motion.div 
-                        className="w-16 h-32 bg-accent-magenta rounded-t-md shadow-lg origin-bottom" 
-                        title="With Socio Captions"
-                        variants={barVariants(0.1)} // Slightly delay this bar
-                      ></motion.div>
-                      <p className="text-xs text-accent-magenta font-semibold mt-2">With Socio</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-6 text-center">Reach more people with captions that resonate.</p>
-                </motion.div>
-
-                {/* Engagement Rate Chart */}
-                <motion.div 
-                  className="bg-white p-6 rounded-lg shadow-md border border-gray-200"
-                  variants={cardItemVariants}
-                >
-                  <h3 className="flex items-center text-xl font-semibold mb-6 text-gray-700">
-                    <ArrowTrendingUpIcon className="w-6 h-6 mr-2 text-blue-500" />
-                    Estimated Engagement Rate
-                  </h3>
-                  <div className="flex justify-around items-end h-40 space-x-4">
-                    {/* Without Socio Bar */}
-                    <div className="text-center flex flex-col justify-end items-center">
-                      <motion.p variants={textVariants(0)} className="text-2xl font-bold text-gray-500 mb-1">2.5%</motion.p>
-                      <motion.div 
-                        className="w-16 h-12 bg-gray-300 rounded-t-md origin-bottom" 
-                        title="Average Engagement"
-                        variants={barVariants(0)}
-                      ></motion.div>
-                      <p className="text-xs text-gray-500 mt-2">Average</p>
-                    </div>
-                    {/* With Socio Bar */}
-                    <div className="text-center flex flex-col justify-end items-center">
-                       <motion.p variants={textVariants(0.1)} className="text-3xl font-bold text-accent-magenta mb-1">6.0%</motion.p>
-                       <motion.div 
-                         className="w-16 h-28 bg-accent-magenta rounded-t-md shadow-lg origin-bottom" 
-                         title="With Socio Captions"
-                         variants={barVariants(0.1)} // Slightly delay this bar
-                       ></motion.div>
-                      <p className="text-xs text-accent-magenta font-semibold mt-2">With Socio</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-6 text-center">Spark more likes, comments, and shares.</p>
-                </motion.div>
-              </motion.div>
-            );
-          })()}
-        </section>
-        {/* --- END: Estimated Growth Section --- */}
-        
-        {/* --- NEW: Usage Info Display --- */}
-        {userProfile && !loadingProfile && (
-             <div className="w-full max-w-4xl mb-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-wrap">
-                     <div className="text-center sm:text-left">
-                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <IdentificationIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Current Plan
-                        </p>
-                         <p className="text-lg font-semibold text-accent-magenta capitalize">{userProfile.plan || 'Free'}</p>
-                    </div>
-                     <div className="text-center sm:text-left">
-                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Text Generations Used
-                        </p>
-                         <p className="text-lg font-medium text-gray-800">
-                           {userProfile.monthly_text_generations_used ?? 0} / {userProfile.limits.text === Infinity ? 'Unlimited' : userProfile.limits.text}
-                         </p>
-                    </div>
-                     <div className="text-center sm:text-left">
-                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <PhotoIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Image Generations Used
-                        </p>
-                         <p className="text-lg font-medium text-gray-800">
-                             {userProfile.monthly_image_generations_used ?? 0} / {userProfile.limits.image === Infinity ? 'Unlimited' : userProfile.limits.image}
-                         </p>
-                    </div>
-                    <div className="text-center sm:text-left">
-                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                            <CalendarDaysIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Usage Resets On
-                         </p>
-                         <p className="text-lg font-medium text-gray-800">{formatDate(userProfile.usage_reset_date)}</p>
-                    </div>
-                    <div>
-                       <Link href="/pricing" className="flex items-center text-sm font-medium text-accent-magenta hover:underline whitespace-nowrap">
-                           <ArrowUpCircleIcon className="w-4 h-4 mr-1" /> Change Plan
-                       </Link>
-                    </div>
-                 </div>
-             </div>
-        )}
-        {/* --- END NEW: Usage Info Display --- */}
-
         {/* --- Wrapper Div for Side-by-Side Layout --- */}
         <div className="w-full flex flex-col lg:flex-row gap-8 justify-center items-start">
 
@@ -693,13 +545,13 @@ export default function Home() {
             <div className="flex border-b border-gray-200">
               <button 
                 onClick={() => setInputMode('text')}
-                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-accent-magenta text-accent-magenta' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'text' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 💡 Idea to Caption
               </button>
               <button 
                 onClick={() => setInputMode('image')}
-                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-accent-magenta text-accent-magenta' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-2 px-4 text-center text-sm font-medium ${inputMode === 'image' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700'}`}
               >
                  📸 Photo to Caption
               </button>
@@ -720,7 +572,7 @@ export default function Home() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g., A beautiful sunset over the mountains..."
-                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                    className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out text-gray-900"
               required
             />
           </div>
@@ -774,7 +626,7 @@ export default function Home() {
                            onClick={() => setImageCategory(cat.name)}
                            className={`flex items-center justify-center space-x-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all duration-150 
                              ${imageCategory === cat.name 
-                               ? 'border-accent-magenta bg-accent-magenta text-white shadow-sm' 
+                               ? 'border-accent bg-accent text-white shadow-sm' 
                                : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400'}`}
                          >
                            <span>{cat.emoji}</span>
@@ -802,7 +654,7 @@ export default function Home() {
                           value={subjectName}
                           onChange={(e) => setSubjectName(e.target.value)}
                           placeholder="e.g., Luna the Dog, Acme Corp, Birthday Cake..."
-                          className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                          className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out text-gray-900"
                         />
                       </div>
                       {/* --- End Subject Name Input --- */}
@@ -820,7 +672,7 @@ export default function Home() {
                           value={userKeywords}
                           onChange={(e) => setUserKeywords(e.target.value)}
                           placeholder="Type keywords here... 🎨"
-                          className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out text-gray-900"
+                          className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out text-gray-900"
                         />
                       </div>
                       {/* --- End Keyword Input --- */}
@@ -841,7 +693,7 @@ export default function Home() {
               id="platform"
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Instagram</option>
               <option>Twitter</option>
@@ -860,7 +712,7 @@ export default function Home() {
               id="tone"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
+                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out bg-white text-gray-900"
             >
               <option>Casual</option>
               <option>Professional</option>
@@ -877,7 +729,7 @@ export default function Home() {
           <button
             onClick={handleGenerateCaption} 
               disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && (!resizedImageData || !imageCategory))}
-              className="w-full bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-3 px-4 rounded-full transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
+              className="w-full bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-full transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"
           >
             {isLoading ? (
                <> <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating...</span> </> 
@@ -896,7 +748,7 @@ export default function Home() {
           </h3>
           {isLoading && (
             <div className="flex justify-center items-center h-20">
-                   <svg className="animate-spin h-6 w-6 text-accent-magenta" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                   <svg className="animate-spin h-6 w-6 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             </div>
           )} 
           {error && (
@@ -906,11 +758,21 @@ export default function Home() {
                  {error.isLimitError && (
                      <Link 
                          href="/pricing"
-                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent-magenta hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-magenta transition-colors duration-150"
+                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors duration-150"
                      >
                        Upgrade Plan
                      </Link>
                  )}
+                 {/* --- NEW: Show Signup button for trial limit errors --- */}
+                 {error.isSignupPrompt && (
+                     <Link 
+                         href="/auth?redirect=/"
+                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors duration-150"
+                     >
+                       Sign Up to Continue
+                     </Link>
+                 )}
+                 {/* --- END NEW --- */}
             </div>
           )}
           {generatedCaption && !isLoading && !error && (
@@ -925,6 +787,48 @@ export default function Home() {
         </div>
         {/* --- End Wrapper Div --- */}
 
+        {/* --- NEW: Usage Info Display --- */}
+        {userProfile && !loadingProfile && (
+             <div className="w-full max-w-4xl mb-12 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                 <div className="flex flex-col sm:flex-row justify-around items-center gap-4 flex-wrap">
+                     <div className="text-center sm:text-left">
+                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
+                           <IdentificationIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Current Plan
+                        </p>
+                         <p className="text-lg font-semibold text-accent capitalize">{userProfile.plan || 'Free'}</p>
+                    </div>
+                     <div className="text-center sm:text-left">
+                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
+                           <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Text Generations Used
+                        </p>
+                         <p className="text-lg font-medium text-gray-800">
+                           {userProfile.monthly_text_generations_used ?? 0} / {userProfile.limits.text === Infinity ? 'Unlimited' : userProfile.limits.text}
+                         </p>
+                    </div>
+                     <div className="text-center sm:text-left">
+                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
+                           <PhotoIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Image Generations Used
+                        </p>
+                         <p className="text-lg font-medium text-gray-800">
+                             {userProfile.monthly_image_generations_used ?? 0} / {userProfile.limits.image === Infinity ? 'Unlimited' : userProfile.limits.image}
+                         </p>
+                    </div>
+                    <div className="text-center sm:text-left">
+                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
+                            <CalendarDaysIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Usage Resets On
+                         </p>
+                         <p className="text-lg font-medium text-gray-800">{formatDate(userProfile.usage_reset_date)}</p>
+                    </div>
+                    <div>
+                       <Link href="/pricing" className="flex items-center text-sm font-medium text-accent hover:underline whitespace-nowrap">
+                           <ArrowUpCircleIcon className="w-4 h-4 mr-1" /> Change Plan
+                       </Link>
+                    </div>
+                 </div>
+             </div>
+        )}
+        {/* --- END NEW: Usage Info Display --- */}
+
       </main>
 
       {/* --- Simple Pricing Overview Section --- */}
@@ -932,7 +836,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-semibold text-gray-800 mb-3">Find the Perfect Plan</h2>
           <p className="text-gray-600 mb-10">
-            Choose the plan that best fits your needs. More details on our <Link href="/pricing" className="text-accent-magenta hover:underline">pricing page</Link>.
+            Choose the plan that best fits your needs. More details on our <Link href="/pricing" className="text-accent hover:underline">pricing page</Link>.
           </p>
 
           {/* Pricing Grid - Animate */}
@@ -961,7 +865,7 @@ export default function Home() {
                   variants={itemVariants}
                 >
                   <h3 className="text-xl font-semibold mb-2 text-gray-700">Free</h3>
-                  <p className="text-3xl font-bold text-accent-magenta mb-4">$0<span className="text-sm font-normal text-gray-500">/month</span></p>
+                  <p className="text-3xl font-bold text-accent mb-4">$0<span className="text-sm font-normal text-gray-500">/month</span></p>
                   <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
                     <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.text} Text Generations</li>
                     <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
@@ -972,39 +876,21 @@ export default function Home() {
                   </Link>
                 </motion.div>
 
-                {/* Basic Plan Card (Example) */}
-                <motion.div 
-                  className="border border-accent-magenta rounded-lg p-6 flex flex-col items-center shadow-lg relative transition-all duration-200 hover:scale-[1.03] hover:shadow-xl" // Added transition/hover
-                  variants={itemVariants}
-                >
-                  <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent-magenta text-white text-xs font-bold px-3 py-1 rounded-full">Popular</span>
-                  <h3 className="text-xl font-semibold mb-2 text-gray-700">Basic</h3>
-                  <p className="text-3xl font-bold text-accent-magenta mb-4">$9<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */} 
-                  <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
-                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.text} Text Generations</li>
-                    <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.basic.image} Image Generations</li>
-                    <li className="flex items-center"><CheckIcon /> Priority Support</li>
-                    <li className="flex items-center"><CheckIcon /> More Tone Options</li>
-                  </ul>
-                  <Link href="/pricing" className="mt-auto w-full text-center bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-150">
-                    Choose Basic
-                  </Link>
-                </motion.div>
-
                 {/* Pro Plan Card (Example) */}
                 <motion.div 
-                  className="border border-gray-200 rounded-lg p-6 flex flex-col items-center transition-all duration-200 hover:scale-[1.03] hover:shadow-lg" // Added transition/hover
+                  className="border border-accent rounded-lg p-6 flex flex-col items-center shadow-lg relative transition-all duration-200 hover:scale-[1.03] hover:shadow-xl" // Added transition/hover
                   variants={itemVariants}
                 >
+                  <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">Popular</span>
                   <h3 className="text-xl font-semibold mb-2 text-gray-700">Pro</h3>
-                  <p className="text-3xl font-bold text-accent-magenta mb-4">$29<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */}
+                  <p className="text-3xl font-bold text-accent mb-4">$29<span className="text-sm font-normal text-gray-500">/month</span></p> {/* Placeholder Price */}
                   <ul className="text-gray-600 text-sm space-y-2 mb-6 text-left">
                     <li className="flex items-center"><CheckIcon /> Unlimited Text Generations</li>
                     <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.pro.image} Image Generations</li>
                     <li className="flex items-center"><CheckIcon /> Dedicated Support</li>
                     <li className="flex items-center"><CheckIcon /> Early Access Features</li>
                   </ul>
-                  <Link href="/pricing" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
+                  <Link href="/pricing" className="mt-auto w-full text-center bg-accent hover:bg-accent-dark text-white font-bold py-2 px-4 rounded-md transition-colors duration-150">
                     Choose Pro
                   </Link>
                 </motion.div>
@@ -1030,12 +916,12 @@ export default function Home() {
               onChange={(e) => setNewsletterEmail(e.target.value)} 
               required
               disabled={isSubscribing} // Disable input while subscribing
-              className="flex-grow p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent-magenta focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-50"
+              className="flex-grow p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-transparent transition duration-150 ease-in-out text-gray-900 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={isSubscribing || !newsletterEmail} // Disable button while subscribing or if email is empty
-              className="bg-accent-magenta hover:bg-fuchsia-700 text-white font-bold py-3 px-6 rounded-md transition-colors duration-150 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex justify-center items-center"
+              className="bg-accent hover:bg-accent-dark text-white font-bold py-3 px-6 rounded-md transition-colors duration-150 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex justify-center items-center"
             >
               {isSubscribing ? (
                 <>
@@ -1075,26 +961,35 @@ export default function Home() {
             <div className="flex items-center space-x-5">
                {/* Updated Logo Here */}
                <Image 
-                 src="/logo232.png"
+                 src="/qybrr.png"
                  alt="Logo"
                  width={80}
                  height={20}
                />
-               <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-accent-magenta transition-colors">
+               <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-accent transition-colors">
                   <FacebookIcon />
                </a>
-               <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-accent-magenta transition-colors">
+               <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-accent transition-colors">
                   <TwitterIcon />
                </a>
-               <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-accent-magenta transition-colors">
+               <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-accent transition-colors">
                   <InstagramIcon />
                </a>
-               <a href="#" aria-label="LinkedIn" className="text-gray-400 hover:text-accent-magenta transition-colors">
+               <a href="#" aria-label="LinkedIn" className="text-gray-400 hover:text-accent transition-colors">
                   <LinkedinIcon />
                </a>
             </div>
         </div>
       </footer>
+
+      {/* --- NEW: Credit Top-Up Popup --- */}
+      {showTopUpPopup && (
+        <CreditTopUpPopup 
+          onClose={handleClosePopup} 
+          onPurchase={handlePurchaseClick} 
+        />
+      )}
+
     </div>
   );
 } 
