@@ -410,15 +410,31 @@ export default function Home() {
         body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
+        setGeneratedCaption(data.caption || '');
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        // --- NEW: Update usage count on frontend ---
+        if (userProfile) {
+          // Optimistically update logged-in user's profile
+          const newCount = (userProfile.monthly_text_generations_used || 0) + 1;
+          setUserProfile({ ...userProfile, monthly_text_generations_used: newCount });
+        } else {
+          // Update trial usage for anonymous users
+          if (inputMode === 'text') {
+            setTrialTextUsed(prev => prev + 1);
+          } else {
+            setTrialImageUsed(prev => prev + 1);
+          }
+        }
+
+      } else {throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
       let finalCaption = data.caption.trim(); 
       if (finalCaption.startsWith('"') && finalCaption.endsWith('"')) {
         finalCaption = finalCaption.slice(1, -1); 
+{{ ... }}
       }
       
       setGeneratedCaption(finalCaption); 
@@ -937,68 +953,89 @@ export default function Home() {
 )}
 {/* --- End Signup Prompt Modal --- */}
 
-      {/* --- NEW: User Usage Dashboard (v2) --- */}
-      {userProfile && (
-        <section id="usage-dashboard" className="py-12 bg-white border-b border-gray-200">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                Your Usage Dashboard
-              </h2>
-              <p className="mt-4 text-lg text-gray-600">
-                Track your monthly credits and see when they reset.
+            {/* --- NEW: Unified Usage Dashboard --- */}
+      <section id="usage-dashboard" className="py-12 bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              {userProfile ? 'Your Usage Dashboard' : 'Your Free Trial'}
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              {userProfile ? 'Track your monthly credits and see when they reset.' : 'You have 5 free generations for text and images to try Socio.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Text Generations Card */}
+            <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <ChatBubbleOvalLeftEllipsisIcon className="w-8 h-8 text-accent mr-4" />
+                <h3 className="text-xl font-bold text-gray-800">Text Generations</h3>
+              </div>
+              <p className="text-gray-600 text-sm mb-2">
+                {userProfile
+                  ? `${userProfile.monthly_text_generations_used} / ${userProfile.limits?.text ?? SIGNUP_LIMITS.text}`
+                  : `${trialTextUsed} / ${TRIAL_LIMITS.text}`}
               </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Text Generations Card */}
-              <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
-                <div className="flex items-center mb-4">
-                  <ChatBubbleOvalLeftEllipsisIcon className="w-8 h-8 text-accent mr-4" />
-                  <h3 className="text-xl font-bold text-gray-800">Text Generations</h3>
-                </div>
-                <p className="text-gray-600 text-sm mb-2">
-                  {`${userProfile.monthly_text_generations_used} / ${PLAN_LIMITS[userProfile.plan_id]?.text ?? SIGNUP_LIMITS.text}`}
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-accent h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, ((userProfile.monthly_text_generations_used ?? 0) / (PLAN_LIMITS[userProfile.plan_id]?.text ?? SIGNUP_LIMITS.text)) * 100)}%` }}
-                  ></div>
-                </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-accent h-2.5 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${userProfile
+                      ? Math.min(100, ((userProfile.monthly_text_generations_used || 0) / (userProfile.limits?.text || SIGNUP_LIMITS.text)) * 100)
+                      : Math.min(100, (trialTextUsed / TRIAL_LIMITS.text) * 100)}%`,
+                  }}
+                ></div>
               </div>
+            </div>
 
-              {/* Image Generations Card */}
-              <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
-                <div className="flex items-center mb-4">
-                  <PhotoIcon className="w-8 h-8 text-accent-orange mr-4" />
-                  <h3 className="text-xl font-bold text-gray-800">Image Generations</h3>
-                </div>
-                <p className="text-gray-600 text-sm mb-2">
-                   {`${userProfile.monthly_image_generations_used} / ${PLAN_LIMITS[userProfile.plan_id]?.image ?? SIGNUP_LIMITS.image}`}
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-accent-orange h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, ((userProfile.monthly_image_generations_used ?? 0) / (PLAN_LIMITS[userProfile.plan_id]?.image ?? SIGNUP_LIMITS.image)) * 100)}%` }}
-                  ></div>
-                </div>
+            {/* Image Generations Card */}
+            <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <PhotoIcon className="w-8 h-8 text-accent-orange mr-4" />
+                <h3 className="text-xl font-bold text-gray-800">Image Generations</h3>
               </div>
-            </div>
-            <div className="text-center mt-8 text-sm text-gray-500">
-                <p className="flex items-center justify-center">
-                    <CalendarDaysIcon className="w-4 h-4 mr-2" />
-                    Your credits reset on {formatDate(userProfile.usage_reset_date)}
-                </p>
-                <p className="mt-2">
-                    Need more credits? 
-                    <Link href="#pricing" className="font-medium text-accent hover:underline ml-1">
-                        Upgrade your plan
-                    </Link>
-                </p>
+              <p className="text-gray-600 text-sm mb-2">
+                {userProfile
+                  ? `${userProfile.monthly_image_generations_used} / ${userProfile.limits?.image ?? SIGNUP_LIMITS.image}`
+                  : `${trialImageUsed} / ${TRIAL_LIMITS.image}`}
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-accent-orange h-2.5 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${userProfile
+                      ? Math.min(100, ((userProfile.monthly_image_generations_used || 0) / (userProfile.limits?.image || SIGNUP_LIMITS.image)) * 100)
+                      : Math.min(100, (trialImageUsed / TRIAL_LIMITS.image) * 100)}%`,
+                  }}
+                ></div>
+              </div>
             </div>
           </div>
-        </section>
-      )}
+          <div className="text-center mt-8 text-sm text-gray-500">
+            {userProfile ? (
+              <>
+                <p className="flex items-center justify-center">
+                  <CalendarDaysIcon className="w-4 h-4 mr-2" />
+                  Your credits reset on {formatDate(userProfile.usage_reset_date)}
+                </p>
+                <p className="mt-2">
+                  Need more credits?
+                  <Link href="#pricing" className="font-medium text-accent hover:underline ml-1">
+                    Upgrade your plan
+                  </Link>
+                </p>
+              </>
+            ) : (
+              <p className="mt-2">
+                <Link href="/auth" className="font-medium text-accent hover:underline">
+                  Sign up
+                </Link>
+                {' '}to get more credits and unlock all features.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
 {/* --- Simple Pricing Overview Section --- */}
       <section className="bg-white py-16 px-4 md:px-8">
