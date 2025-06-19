@@ -14,24 +14,33 @@ export default function RedeemKeyDialog({ open, onClose, userProfile, setUserPro
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    // Simulate redeem logic
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      });
+      const data = await res.json();
       setLoading(false);
-      // Update credits if userProfile and setUserProfile are provided
+      if (!res.ok) {
+        setMessage(data.error || 'Redeem failed.');
+        return;
+      }
+      setMessage('Key redeemed! +20 text, +15 image generations.');
       if (userProfile && setUserProfile) {
-        const newText = (userProfile.monthly_text_generations_used ?? 0) + 20;
-        const newImage = (userProfile.monthly_image_generations_used ?? 0) + 15;
         setUserProfile({
           ...userProfile,
-          monthly_text_generations_used: newText,
-          monthly_image_generations_used: newImage,
+          monthly_text_generations_used: data.newText,
+          monthly_image_generations_used: data.newImage,
         });
-        setMessage(`Key redeemed! +20 text, +15 image generations. New totals: ${newText} text, ${newImage} image.`);
-      } else {
-        setMessage("Key redeemed! +20 text, +15 image generations.");
       }
-      // Optionally call onClose or redirect
-    }, 1200);
+      setKey("");
+      // Optionally close modal after a short delay
+      // setTimeout(onClose, 1200);
+    } catch (err) {
+      setLoading(false);
+      setMessage('Server error. Try again.');
+    }
   };
 
   return (

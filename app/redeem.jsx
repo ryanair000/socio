@@ -13,12 +13,26 @@ export default function RedeemPage() {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    // TODO: Replace with actual redeem logic/API call
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      });
+      const data = await res.json();
       setLoading(false);
-      setMessage("Key redeemed! (Demo only)");
-      // router.push("/"); // Optionally redirect
-    }, 1200);
+      if (!res.ok) {
+        setMessage(data.error || 'Redeem failed.');
+        return;
+      }
+      setMessage('Key redeemed! +20 text, +15 image generations.');
+      setKey("");
+      // Optionally redirect after a short delay
+      // setTimeout(() => router.push('/'), 1200);
+    } catch (err) {
+      setLoading(false);
+      setMessage('Server error. Try again.');
+    }
   };
 
   return (
