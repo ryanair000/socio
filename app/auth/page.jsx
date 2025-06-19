@@ -89,29 +89,33 @@ export default function AuthPage() {
   };
   
   const handleEmailSignUp = async (e) => {
-     e.preventDefault();
-     setLoading(true);
-     try {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            // Optional: Redirect after email confirmation if enabled in Supabase settings
-            emailRedirectTo: `${window.location.origin}/`,
-          },
-        });
-        if (signUpError) throw signUpError;
-        toast.success('Sign up successful! Please check your email to confirm your account.', {
-          duration: 5000,
-        });
-        setIsLogin(true); // Switch back to login view after successful signup prompt
-     } catch (signUpError) {
-       console.error('Sign Up Error:', signUpError);
-       toast.error(signUpError.message || 'Failed to sign up. Please try again.');
-     } finally {
-       setLoading(false);
-     }
-  }
+   e.preventDefault();
+   setLoading(true);
+   try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+      console.log('Supabase signUp response:', signUpData, signUpError);
+      if (signUpError) throw signUpError;
+      if (!signUpData?.user) {
+        toast('Sign up response did not include a user. Please check your Supabase project email settings.', { duration: 6000, icon: '⚠️' });
+      }
+      toast.success('Sign up successful! Please check your email to confirm your account.', {
+        duration: 5000,
+      });
+      setIsLogin(true);
+   } catch (signUpError) {
+     console.error('Sign Up Error:', signUpError);
+     toast.error(signUpError.message || 'Failed to sign up. Please try again.');
+     toast('If you did not receive a confirmation email, please check your Supabase Auth settings (Auth → Settings → Email) and ensure that "Enable email confirmations" is ON, and your SMTP/Site URL is correct.', { duration: 9000, icon: '⚠️' });
+   } finally {
+     setLoading(false);
+   }
+}
 
   // --- Password Reset Handler ---
   const handlePasswordReset = async () => {

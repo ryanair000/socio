@@ -503,10 +503,10 @@ export default function Home() {
                   Logout
                  </button>
               ) : (
-                 <Link href="/auth" className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors">
-                    <ArrowRightOnRectangleIcon className="w-5 h-5 mr-1" />
-                    Login / Sign Up
-                 </Link>
+                 <Link href="/redeem" className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-4 py-2 rounded shadow transition-colors">
+  <BoltIcon className="w-5 h-5 mr-1" />
+  Redeem Key
+</Link>
               )}
              </div>
           </nav>
@@ -766,10 +766,10 @@ export default function Home() {
                  {/* --- NEW: Show Signup button for trial limit errors --- */}
                  {error.isSignupPrompt && (
                      <Link 
-                         href="/auth?redirect=/"
+                         href="/redeem"
                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors duration-150"
                      >
-                       Sign Up to Continue
+                       Redeem Key
                      </Link>
                  )}
                  {/* --- END NEW --- */}
@@ -871,9 +871,9 @@ export default function Home() {
                     <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
                     <li className="flex items-center"><CheckIcon /> Basic Support</li>
                   </ul>
-                  <Link href="/auth" className="mt-auto w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-150">
-                    Get Started
-                  </Link>
+                  <Link href="/redeem" className="mt-auto w-full text-center bg-accent hover:bg-accent-dark text-white font-medium py-2 px-4 rounded-md transition-colors duration-150">
+  Redeem Key
+</Link>
                 </motion.div>
 
                 {/* Pro Plan Card (Example) */}
