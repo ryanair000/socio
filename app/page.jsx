@@ -410,44 +410,36 @@ export default function Home() {
         body: JSON.stringify(requestBody),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedCaption(data.caption || '');
+      const data = await response.json();
 
-        // --- NEW: Update usage count on frontend ---
-        if (userProfile) {
-          // Optimistically update logged-in user's profile
-          const newCount = (userProfile.monthly_text_generations_used || 0) + 1;
-          setUserProfile({ ...userProfile, monthly_text_generations_used: newCount });
-        } else {
-          // Update trial usage for anonymous users
-          if (inputMode === 'text') {
-            setTrialTextUsed(prev => prev + 1);
-          } else {
-            setTrialImageUsed(prev => prev + 1);
-          }
-        }
-
-      } else {throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
-      let finalCaption = data.caption.trim(); 
+      let finalCaption = data.caption.trim();
       if (finalCaption.startsWith('"') && finalCaption.endsWith('"')) {
-        finalCaption = finalCaption.slice(1, -1); 
-{{ ... }}
+        finalCaption = finalCaption.slice(1, -1);
       }
-      
-      setGeneratedCaption(finalCaption); 
+      setGeneratedCaption(finalCaption);
 
-      // --- NEW: Increment trial counter if not logged in ---
-      if (!userProfile) {
+      // Update usage count on frontend
+      if (userProfile) {
+        // Optimistically update logged-in user's profile
+        if (inputMode === 'text') {
+            const newCount = (userProfile.monthly_text_generations_used || 0) + 1;
+            setUserProfile({ ...userProfile, monthly_text_generations_used: newCount });
+        } else {
+            const newCount = (userProfile.monthly_image_generations_used || 0) + 1;
+            setUserProfile({ ...userProfile, monthly_image_generations_used: newCount });
+        }
+      } else {
+        // Update trial usage for anonymous users
         if (inputMode === 'text') {
           setTrialTextUsed(prev => prev + 1);
-        } else if (inputMode === 'image') {
+        } else {
           setTrialImageUsed(prev => prev + 1);
         }
       }
-      // --- END NEW ---
 
     } catch (err) {
       console.error("API call failed:", err);
