@@ -1,20 +1,20 @@
 import OpenAI from "openai";
-// import { kv } from '@vercel/kv';
-// import { Ratelimit } from '@upstash/ratelimit'; // Optional: Add rate limiting
+import { kv } from '@vercel/kv';
+import { Ratelimit } from '@upstash/ratelimit'; // Optional: Add rate limiting
 import { createClient } from '../../../lib/supabase/server'; // <-- Add Supabase server client import
 import { NextResponse } from 'next/server'; // <-- Add NextResponse import
 
 export const dynamic = 'force-dynamic'; // Ensures the route is always dynamic
 
 // Optional: Initialize Rate Limiter (e.g., 5 requests per minute)
-// const ratelimit = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
-//   ? new Ratelimit({
-//       redis: kv,
-//       limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 requests per 1 minute
-//       analytics: true,
-//       prefix: '@upstash/ratelimit',
-//     })
-//   : null;
+const ratelimit = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+  ? new Ratelimit({
+      redis: kv,
+      limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 requests per 1 minute
+      analytics: true,
+      prefix: '@upstash/ratelimit',
+    })
+  : null;
 
 // --- OpenAI Model IDs ---
 const OPENAI_TEXT_MODEL = "gpt-4o"; // or "gpt-4-turbo" for cheaper/faster
@@ -43,16 +43,16 @@ const PLAN_LIMITS = {
 
 export async function POST(request) {
   // Optional: Rate Limiting Check
-  // if (ratelimit) {
-  //   const identifier = request.ip ?? '127.0.0.1';
-  //   const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
-  //   if (!success) {
-  //     return NextResponse.json(
-  //       { error: "Rate limit exceeded. Please try again later." },
-  //       { status: 429, headers: { 'X-RateLimit-Limit': limit.toString(), 'X-RateLimit-Remaining': remaining.toString(), 'X-RateLimit-Reset': reset.toString() } }
-  //     );
-  //   }
-  // }
+  if (ratelimit) {
+    const identifier = request.ip ?? '127.0.0.1';
+    const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429, headers: { 'X-RateLimit-Limit': limit.toString(), 'X-RateLimit-Remaining': remaining.toString(), 'X-RateLimit-Reset': reset.toString() } }
+      );
+    }
+  }
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
