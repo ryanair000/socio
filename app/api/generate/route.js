@@ -42,117 +42,133 @@ const PLAN_LIMITS = {
 };
 
 export async function POST(request) {
+  // Optional: Rate Limiting Check
+  if (ratelimit) {
+    const identifier = request.ip ?? '127.0.0.1';
+    const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
+    if (!success) {
+      return Response.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429, headers: { 'X-RateLimit-Limit': limit.toString(), 'X-RateLimit-Remaining': remaining.toString(), 'X-RateLimit-Reset': reset.toString() } }
+      );
+    }
+  }
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // --- Parse Request Body (common to all users) ---
+  let requestData;
+  let inputType;
   try {
-    // --- Parse Request Data Early ---
-    let requestData;
-    let inputType;
-    try {
-      requestData = await request.json();
-      inputType = requestData.type;
-      if (!inputType || (inputType !== 'text' && inputType !== 'image')) {
-        throw new Error("Invalid input type specified. Must be 'text' or 'image'.");
-      }
-    } catch (e) {
-      console.error('[REQUEST_PARSE_ERROR]', e);
-      return Response.json({ error: `Invalid request body: ${e.message}` }, { status: 400 });
+    requestData = await request.json();
+    inputType = requestData.type;
+    if (!inputType || (inputType !== 'text' && inputType !== 'image')) {
+      throw new Error("Invalid input type specified. Must be 'text' or 'image'.");
+    }
+    if (inputType === 'text' && (!requestData.prompt || !requestData.prompt.topic || !requestData.prompt.platform || !requestData.prompt.tone)) {
+      throw new Error("Missing required fields for text input: prompt.{topic, platform, tone}");
+    }
+    if (inputType === 'image' && (!requestData.imageData || !requestData.prompt || !requestData.prompt.platform || !requestData.prompt.tone || !requestData.prompt.category)) {
+      throw new Error("Missing required fields for image input: imageData, prompt.{platform, tone, category}");
+    }
+  } catch (e) {
+    console.error('[REQUEST_PARSE_ERROR]', e);
+    return Response.json({ error: `Invalid request body: ${e.message}` }, { status: 400 });
+  }
+
+  let usageUpdatePayload = {};
+  let usageNeedsDbUpdate = false;
+
+  // --- AUTHENTICATED USER FLOW ---
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, monthly_text_generations_used, monthly_image_generations_used, usage_reset_date')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error(`[USAGE_CHECK_ERROR] User: ${user.id}, Error fetching profile:`, profileError);
+      return Response.json({ error: 'Could not retrieve user profile information.' }, { status: 500 });
     }
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const ip = request.ip ?? '127.0.0.1';
+    let { plan, monthly_text_generations_used, monthly_image_generations_used, usage_reset_date } = profile;
+    plan = plan || 'free';
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 
-    let usageNeedsUpdate = false;
-    let updates = {};
-    let monthly_text_generations_used = 0;
-    let monthly_image_generations_used = 0;
-
-    // --- Authorize and Check Limits ---
-    if (user) {
-      // --- AUTHENTICATED USER FLOW ---
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('plan, monthly_text_generations_used, monthly_image_generations_used, usage_reset_date')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || !profile) {
-        return Response.json({ error: 'Could not retrieve user profile.' }, { status: 500 });
-      }
-
-      let { plan, usage_reset_date } = profile;
-      monthly_text_generations_used = profile.monthly_text_generations_used;
-      monthly_image_generations_used = profile.monthly_image_generations_used;
-      plan = plan || 'free';
-      const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
-
-      const today = new Date();
-      if (!usage_reset_date || new Date(usage_reset_date) <= today) {
-        const nextReset = new Date();
-        nextReset.setDate(today.getDate() + 30);
-        updates = { monthly_text_generations_used: 0, monthly_image_generations_used: 0, usage_reset_date: nextReset.toISOString().split('T')[0] };
-        usageNeedsUpdate = true;
-      }
-
-      const usage = inputType === 'text' ? monthly_text_generations_used : monthly_image_generations_used;
-      const limit = inputType === 'text' ? limits.text : limits.image;
-
-      if (usage >= limit) {
-        return Response.json({ error: `Monthly ${inputType} generation limit reached. Please upgrade.` }, { status: 429 });
-      }
-    } else {
-      // --- ANONYMOUS USER (TRIAL) FLOW ---
-      const TRIAL_LIMIT = 5; // 5 free generations per day
-      const usageKey = `trial_usage:${ip}`;
-      const currentUsage = await kv.get(usageKey) || 0;
-
-      if (currentUsage >= TRIAL_LIMIT) {
-        return Response.json({ error: `You have reached the trial limit of ${TRIAL_LIMIT} free generations. Please create an account to continue.` }, { status: 429 });
-      }
+    const today = new Date();
+    if (!usage_reset_date || new Date(usage_reset_date) <= today) {
+      console.log(`[USAGE_RESET] User: ${user.id}, Plan: ${plan}. Resetting usage counts.`);
+      const nextReset = new Date(today); nextReset.setDate(today.getDate() + 30);
+      monthly_text_generations_used = 0;
+      monthly_image_generations_used = 0;
+      usage_reset_date = nextReset.toISOString().split('T')[0];
+      usageUpdatePayload = { monthly_text_generations_used: 0, monthly_image_generations_used: 0, usage_reset_date: usage_reset_date };
+      usageNeedsDbUpdate = true;
     }
 
-    // --- Proceed with Generation ---
-    if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI API key not configured.");
+    let overLimit = (inputType === 'text' && monthly_text_generations_used >= limits.text) ||
+                    (inputType === 'image' && monthly_image_generations_used >= limits.image);
+
+    if (overLimit) {
+      console.warn(`[USAGE_LIMIT_REACHED] User: ${user.id}, Plan: ${plan}, Type: ${inputType}`);
+      if (usageNeedsDbUpdate) {
+        await supabase.from('profiles').update({ ...usageUpdatePayload, updated_at: new Date() }).eq('id', user.id);
+      }
+      return Response.json(
+        { error: `Monthly ${inputType} generation limit (${limits[inputType]}) reached for your ${plan} plan. Please upgrade or wait until ${usage_reset_date}.` },
+        { status: 429 }
+      );
+    }
+
+    // Prepare to increment usage count on success
+    const incrementColumn = inputType === 'text' ? 'monthly_text_generations_used' : 'monthly_image_generations_used';
+    const currentUsage = inputType === 'text' ? monthly_text_generations_used : monthly_image_generations_used;
+    usageUpdatePayload[incrementColumn] = currentUsage + 1;
+    usageNeedsDbUpdate = true;
+  }
+  // --- END AUTHENTICATED FLOW (Trial users skip this block) ---
+
+  // --- GENERATION LOGIC (for all users) ---
+  try {
+    if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI API key is not configured.");
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     let generatedCaption = "";
 
     if (inputType === 'text') {
       const { topic, platform, tone } = requestData.prompt;
-      let textPrompt = `Generate a ${platform} caption in a ${tone} tone about the following topic: ${topic}.`;
-      if (requestData.kenyanize) textPrompt += ' Kenyanize the caption.';
+      let textPrompt = `Generate a ${platform} caption in a ${tone} tone about the following topic: ${topic}. Keep it concise and engaging.`;
+      if (requestData.kenyanize) textPrompt += ' Kenyanize the caption: use Kenyan slang, references, and local style.';
       const completion = await openai.chat.completions.create({
         model: OPENAI_TEXT_MODEL,
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that writes catchy social media captions.' },
+          { role: 'system', content: 'You are a helpful assistant that writes catchy and concise social media captions.' },
           { role: 'user', content: textPrompt },
         ],
-        max_tokens: 175,
-        temperature: 0.65,
+        max_tokens: 175, temperature: 0.65,
       });
       generatedCaption = completion.choices[0]?.message?.content?.trim() || '';
-    } else {
-      throw new Error('Image captioning is not yet supported.');
+    } else if (inputType === 'image') {
+      // Image generation logic remains unchanged, currently returns error
+      throw new Error('Image captioning is not yet supported with OpenAI backend.');
     }
 
     if (!generatedCaption) throw new Error("AI returned an empty caption.");
 
-    // --- SUCCESS: Increment Usage Count ---
-    if (user) {
-      const incrementColumn = inputType === 'text' ? 'monthly_text_generations_used' : 'monthly_image_generations_used';
-      const currentCount = inputType === 'text' ? monthly_text_generations_used : monthly_image_generations_used;
-      updates[incrementColumn] = (usageNeedsUpdate ? 0 : currentCount) + 1;
-      updates.updated_at = new Date();
-      await supabase.from('profiles').update(updates).eq('id', user.id);
-    } else {
-      const usageKey = `trial_usage:${ip}`;
-      await kv.incr(usageKey);
-      await kv.expire(usageKey, 60 * 60 * 24); // 24-hour expiry
+    // --- SUCCESS: Update DB only for authenticated users ---
+    if (user && usageNeedsDbUpdate) {
+      usageUpdatePayload.updated_at = new Date();
+      const { error: updateError } = await supabase.from('profiles').update(usageUpdatePayload).eq('id', user.id);
+      if (updateError) {
+        console.error(`[USAGE_UPDATE_ERROR] User: ${user.id}, Failed to update usage:`, updateError);
+      }
     }
 
     return Response.json({ caption: generatedCaption });
 
   } catch (error) {
-    console.error('[API_ROUTE_ERROR]', error);
-    const errorMessage = error.message || 'An unexpected error occurred.';
-    return Response.json({ error: errorMessage }, { status: 500 });
+    console.error('[AI_ERROR]', error);
+    return Response.json({ error: error.message || "Caption generation failed." }, { status: 500 });
   }
 }
