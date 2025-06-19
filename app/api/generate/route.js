@@ -47,7 +47,7 @@ export async function POST(request) {
     const identifier = request.ip ?? '127.0.0.1';
     const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
     if (!success) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
         { status: 429, headers: { 'X-RateLimit-Limit': limit.toString(), 'X-RateLimit-Remaining': remaining.toString(), 'X-RateLimit-Reset': reset.toString() } }
       );
@@ -74,7 +74,7 @@ export async function POST(request) {
     }
   } catch (e) {
     console.error('[REQUEST_PARSE_ERROR]', e);
-    return Response.json({ error: `Invalid request body: ${e.message}` }, { status: 400 });
+    return NextResponse.json({ error: `Invalid request body: ${e.message}` }, { status: 400 });
   }
 
   let usageUpdatePayload = {};
@@ -90,7 +90,7 @@ export async function POST(request) {
 
     if (profileError || !profile) {
       console.error(`[USAGE_CHECK_ERROR] User: ${user.id}, Error fetching profile:`, profileError);
-      return Response.json({ error: 'Could not retrieve user profile information.' }, { status: 500 });
+      return NextResponse.json({ error: 'Could not retrieve user profile information.' }, { status: 500 });
     }
 
     let { plan, monthly_text_generations_used, monthly_image_generations_used, usage_reset_date } = profile;
@@ -116,7 +116,7 @@ export async function POST(request) {
       if (usageNeedsDbUpdate) {
         await supabase.from('profiles').update({ ...usageUpdatePayload, updated_at: new Date() }).eq('id', user.id);
       }
-      return Response.json(
+      return NextResponse.json(
         { error: `Monthly ${inputType} generation limit (${limits[inputType]}) reached for your ${plan} plan. Please upgrade or wait until ${usage_reset_date}.` },
         { status: 429 }
       );
@@ -165,12 +165,12 @@ export async function POST(request) {
       }
     }
 
-    return Response.json({ caption: generatedCaption });
+    return NextResponse.json({ caption: generatedCaption });
 
   } catch (error) {
     console.error('[AI_ERROR]', JSON.stringify(error, null, 2));
     const errorMessage = error.response?.data?.detail || error.message || "Caption generation failed. Please try again.";
-    return Response.json(
+    return NextResponse.json(
         { error: errorMessage },
         { status: 500 }
     );
