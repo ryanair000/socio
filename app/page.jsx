@@ -115,8 +115,13 @@ const PLAN_LIMITS = {
 
 // Define trial limits separately for ungated access
 const TRIAL_LIMITS = {
+  text: 5, // New user trial: 5 text generations
+  image: 5, // New user trial: 5 image generations
+};
+
+const SIGNUP_LIMITS = {
   text: 20,
-  image: 10,
+  image: 15,
 };
 
 export default function Home() {
@@ -270,6 +275,8 @@ export default function Home() {
   };
   // --- END Newsletter Submit Handler ---
 
+  // --- Signup Prompt Modal ---
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   // --- API Call Logic ---
   const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
@@ -309,12 +316,12 @@ export default function Home() {
     // --- NEW: Check ungated trial limits if user is not logged in ---
     if (!userProfile) {
       if (inputMode === 'text' && trialTextUsed >= TRIAL_LIMITS.text) {
-        setError({ message: `You've used your ${TRIAL_LIMITS.text} free text generations. Please sign up to continue.`, isSignupPrompt: true });
+        setShowSignupPrompt(true);
         setIsLoading(false);
         return;
       }
       if (inputMode === 'image' && trialImageUsed >= TRIAL_LIMITS.image) {
-        setError({ message: `You've used your ${TRIAL_LIMITS.image} free image generations. Please sign up to continue.`, isSignupPrompt: true });
+        setShowSignupPrompt(true);
         setIsLoading(false);
         return;
       }
@@ -523,7 +530,7 @@ export default function Home() {
           </nav>
         </div>
       </header>
-<RedeemKeyDialog open={showRedeemDialog} onClose={() => setShowRedeemDialog(false)} />
+<RedeemKeyDialog open={showRedeemDialog} onClose={() => setShowRedeemDialog(false)} userProfile={userProfile} setUserProfile={setUserProfile} />
 
       {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
@@ -813,50 +820,115 @@ export default function Home() {
         {/* --- End Wrapper Div --- */}
 
         {/* --- NEW: Usage Info Display --- */}
-        {userProfile && !loadingProfile && (
-             <div className="w-full max-w-4xl mb-12 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                 <div className="flex flex-col sm:flex-row justify-around items-center gap-4 flex-wrap">
-                     <div className="text-center sm:text-left">
-                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <IdentificationIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Current Plan
-                        </p>
-                         <p className="text-lg font-semibold text-accent capitalize">{userProfile.plan || 'Free'}</p>
-                    </div>
-                     <div className="text-center sm:text-left">
-                        <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Text Generations Used
-                        </p>
-                         <p className="text-lg font-medium text-gray-800">
-                           {userProfile.monthly_text_generations_used ?? 0} / {userProfile.limits.text === Infinity ? 'Unlimited' : userProfile.limits.text}
-                         </p>
-                    </div>
-                     <div className="text-center sm:text-left">
-                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                           <PhotoIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Image Generations Used
-                        </p>
-                         <p className="text-lg font-medium text-gray-800">
-                             {userProfile.monthly_image_generations_used ?? 0} / {userProfile.limits.image === Infinity ? 'Unlimited' : userProfile.limits.image}
-                         </p>
-                    </div>
-                    <div className="text-center sm:text-left">
-                         <p className="flex items-center justify-center sm:justify-start text-sm text-gray-500">
-                            <CalendarDaysIcon className="w-4 h-4 mr-1.5 text-gray-400" /> Usage Resets On
-                         </p>
-                         <p className="text-lg font-medium text-gray-800">{formatDate(userProfile.usage_reset_date)}</p>
-                    </div>
-                    <div>
-                       <Link href="/pricing" className="flex items-center text-sm font-medium text-accent hover:underline whitespace-nowrap">
-                           <ArrowUpCircleIcon className="w-4 h-4 mr-1" /> Change Plan
-                       </Link>
-                    </div>
-                 </div>
-             </div>
-        )}
-        {/* --- END NEW: Usage Info Display --- */}
+        {/* --- USER USAGE DASHBOARD --- */}
+{userProfile && !loadingProfile && (
+  <section className="w-full max-w-3xl mx-auto mb-10 p-6 bg-gradient-to-br from-amber-50 via-white to-accent/10 rounded-2xl shadow-lg border border-accent/10">
+    <h3 className="text-xl md:text-2xl font-bold text-accent mb-6 flex items-center justify-center gap-2">
+      <SparklesIcon className="w-6 h-6 text-accent" /> Your Usage This Month
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Text Generations */}
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-2 mb-2">
+          <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 text-accent" />
+          <span className="text-md font-medium text-gray-700">Text Generations</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4 mb-1 overflow-hidden">
+          <div
+            className="bg-accent h-4 rounded-full transition-all duration-500"
+            style={{ width: `${
+              userProfile.limits.text === Infinity
+                ? 100
+                : Math.min(100, Math.round(((userProfile.monthly_text_generations_used ?? 0) / userProfile.limits.text) * 100))
+            }%` }}
+          ></div>
+        </div>
+        <span className="text-gray-600 text-sm">
+          <span className="font-semibold text-accent text-lg">{userProfile.monthly_text_generations_used ?? 0}</span>
+          {" / "}
+          {userProfile.limits.text === Infinity ? <span className="text-green-700 font-semibold">Unlimited</span> : userProfile.limits.text}
+        </span>
+      </div>
+      {/* Image Generations */}
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-2 mb-2">
+          <PhotoIcon className="w-6 h-6 text-accent" />
+          <span className="text-md font-medium text-gray-700">Image Generations</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4 mb-1 overflow-hidden">
+          <div
+            className="bg-amber-400 h-4 rounded-full transition-all duration-500"
+            style={{ width: `${
+              userProfile.limits.image === Infinity
+                ? 100
+                : Math.min(100, Math.round(((userProfile.monthly_image_generations_used ?? 0) / userProfile.limits.image) * 100))
+            }%` }}
+          ></div>
+        </div>
+        <span className="text-gray-600 text-sm">
+          <span className="font-semibold text-amber-600 text-lg">{userProfile.monthly_image_generations_used ?? 0}</span>
+          {" / "}
+          {userProfile.limits.image === Infinity ? <span className="text-green-700 font-semibold">Unlimited</span> : userProfile.limits.image}
+        </span>
+      </div>
+    </div>
+    <div className="mt-6 flex flex-col items-center gap-2">
+      <div className="flex items-center gap-2 text-sm text-gray-600">
+        <CalendarDaysIcon className="w-5 h-5 text-accent" />
+        Usage resets on
+        <span className="font-semibold text-gray-800">{formatDate(userProfile.usage_reset_date)}</span>
+      </div>
+      <Link
+        href="/pricing"
+        className="inline-flex items-center mt-1 px-4 py-2 text-sm font-medium rounded-md bg-accent text-white hover:bg-accent-dark transition-colors shadow"
+      >
+        <ArrowUpCircleIcon className="w-5 h-5 mr-1" /> Upgrade Plan
+      </Link>
+    </div>
+  </section>
+)}
+{/* --- END USER USAGE DASHBOARD --- */}
 
       </main>
 
-      {/* --- Simple Pricing Overview Section --- */}
+      {/* --- Signup Prompt Modal --- */}
+{showSignupPrompt && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative animate-fade-in flex flex-col items-center">
+      <button
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl font-bold focus:outline-none"
+        onClick={() => setShowSignupPrompt(false)}
+        aria-label="Close dialog"
+      >
+        ×
+      </button>
+      <h2 className="text-2xl font-extrabold text-accent mb-2 text-center flex items-center gap-2">
+        <SparklesIcon className="w-6 h-6 text-accent" /> Sign Up for More Generations
+      </h2>
+      <p className="text-gray-700 text-center mb-4">
+        You have used your <span className="font-semibold text-accent">5 free text</span> and <span className="font-semibold text-amber-600">5 free image</span> generations.<br/>
+        <span className="block mt-2">Sign up to unlock <span className="font-semibold text-accent">20 text</span> and <span className="font-semibold text-amber-600">15 image</span> generations!</span>
+      </p>
+      <a
+        href="https://qybrrlabs.africa/login"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full text-center bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-full transition-colors duration-150 mb-2 shadow-lg text-lg"
+      >
+        Sign Up Now
+      </a>
+      <button
+        onClick={() => setShowSignupPrompt(false)}
+        className="w-full mt-2 text-sm text-gray-500 hover:text-accent underline"
+      >
+        Maybe later
+      </button>
+    </div>
+  </div>
+)}
+{/* --- End Signup Prompt Modal --- */}
+
+{/* --- Simple Pricing Overview Section --- */}
       <section className="bg-white py-16 px-4 md:px-8">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-semibold text-gray-800 mb-3">Find the Perfect Plan</h2>

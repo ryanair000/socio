@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-export default function RedeemKeyDialog({ open, onClose }) {
+// Accept userProfile and setUserProfile as optional props for credit update
+export default function RedeemKeyDialog({ open, onClose, userProfile, setUserProfile }) {
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -13,10 +14,22 @@ export default function RedeemKeyDialog({ open, onClose }) {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    // TODO: Replace with actual redeem logic/API call
+    // Simulate redeem logic
     setTimeout(() => {
       setLoading(false);
-      setMessage("Key redeemed! (Demo only)");
+      // Update credits if userProfile and setUserProfile are provided
+      if (userProfile && setUserProfile) {
+        const newText = (userProfile.monthly_text_generations_used ?? 0) + 20;
+        const newImage = (userProfile.monthly_image_generations_used ?? 0) + 15;
+        setUserProfile({
+          ...userProfile,
+          monthly_text_generations_used: newText,
+          monthly_image_generations_used: newImage,
+        });
+        setMessage(`Key redeemed! +20 text, +15 image generations. New totals: ${newText} text, ${newImage} image.`);
+      } else {
+        setMessage("Key redeemed! +20 text, +15 image generations.");
+      }
       // Optionally call onClose or redirect
     }, 1200);
   };
