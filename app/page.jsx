@@ -509,23 +509,32 @@ export default function Home() {
               {loadingProfile ? (
   <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div> // Loading state
 ) : userProfile ? (
-  <button
-    onClick={handleLogout}
-    disabled={isLoading}
-    className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
-  >
-    <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
-    Logout
-  </button>
-) : (
-  <button
-    onClick={() => setShowRedeemDialog(true)}
-    className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-4 py-2 rounded shadow transition-colors"
-  >
-    <BoltIcon className="w-5 h-5 mr-1" />
-    Redeem Key
-  </button>
-)}
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setShowRedeemDialog(true)}
+                    className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-3 py-2 rounded-md shadow-sm transition-colors"
+                  >
+                    <BoltIcon className="w-5 h-5 mr-1" />
+                    Redeem
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoading}
+                    className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
+                  >
+                    <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/auth"
+                  className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-4 py-2 rounded-md shadow-sm transition-colors"
+                >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5 mr-1" />
+                  Login
+                </Link>
+              )}
              </div>
           </nav>
         </div>
