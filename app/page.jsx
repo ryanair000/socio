@@ -164,6 +164,14 @@ export default function Home() {
   // --- NEW: State for Top-Up Popup ---
   const [showTopUpPopup, setShowTopUpPopup] = useState(false);
 
+  // --- NEW: State to track client-side mounting to prevent hydration errors ---
+  const [isMounted, setIsMounted] = useState(false);
+
+  // --- Set mounted state on client ---
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // --- Load trial usage from localStorage on mount ---
   useEffect(() => {
     const savedText = localStorage.getItem('socioTrialTextUsed');
@@ -945,7 +953,8 @@ export default function Home() {
 )}
 {/* --- End Signup Prompt Modal --- */}
 
-            {/* --- NEW: Unified Usage Dashboard --- */}
+            {/* --- NEW: Unified Usage Dashboard (Hydration Safe) --- */}
+      {isMounted && (
       <section id="usage-dashboard" className="py-12 bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -1028,6 +1037,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
 {/* --- Simple Pricing Overview Section --- */}
       <section className="bg-white py-16 px-4 md:px-8">
