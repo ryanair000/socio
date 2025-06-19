@@ -928,7 +928,7 @@ export default function Home() {
 )}
 {/* --- End Signup Prompt Modal --- */}
 
-      {/* --- NEW: User Usage Dashboard --- */}
+      {/* --- NEW: User Usage Dashboard (v2) --- */}
       {userProfile && (
         <section id="usage-dashboard" className="py-12 bg-white border-b border-gray-200">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
