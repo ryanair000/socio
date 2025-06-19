@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import RedeemKeyDialog from './components/RedeemKeyDialog' // Updated path for app directory
+
 import { createClient } from '../lib/supabase/client'
 import {
   ChatBubbleLeftRightIcon,
@@ -127,7 +127,7 @@ const SIGNUP_LIMITS = {
 export default function Home() {
   // ...existing state
   const [kenyanize, setKenyanize] = useState(false);
-  const [showRedeemDialog, setShowRedeemDialog] = useState(false);
+
   const supabase = createClient(); // <-- Initialize Supabase client
   const router = useRouter(); // <-- Add useRouter for logout redirect
 
@@ -511,13 +511,6 @@ export default function Home() {
 ) : userProfile ? (
                 <div className="flex items-center space-x-4">
                   <button
-                    onClick={() => setShowRedeemDialog(true)}
-                    className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-3 py-2 rounded-md shadow-sm transition-colors"
-                  >
-                    <BoltIcon className="w-5 h-5 mr-1" />
-                    Redeem
-                  </button>
-                  <button
                     onClick={handleLogout}
                     disabled={isLoading}
                     className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
@@ -539,7 +532,6 @@ export default function Home() {
           </nav>
         </div>
       </header>
-<RedeemKeyDialog open={showRedeemDialog} onClose={() => setShowRedeemDialog(false)} userProfile={userProfile} setUserProfile={setUserProfile} />
 
       {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
@@ -804,16 +796,6 @@ export default function Home() {
                        Upgrade Plan
                      </Link>
                  )}
-                 {/* --- NEW: Show Signup button for trial limit errors --- */}
-                 {error.isSignupPrompt && (
-                     <Link 
-                         href="/redeem"
-                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors duration-150"
-                     >
-                       Redeem Key
-                     </Link>
-                 )}
-                 {/* --- END NEW --- */}
             </div>
           )}
           {generatedCaption && !isLoading && !error && (
@@ -899,43 +881,6 @@ export default function Home() {
 {/* --- END USER USAGE DASHBOARD --- */}
 
       </main>
-
-      {/* --- Signup Prompt Modal --- */}
-{showSignupPrompt && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative animate-fade-in flex flex-col items-center">
-      <button
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl font-bold focus:outline-none"
-        onClick={() => setShowSignupPrompt(false)}
-        aria-label="Close dialog"
-      >
-        ×
-      </button>
-      <h2 className="text-2xl font-extrabold text-accent mb-2 text-center flex items-center gap-2">
-        <SparklesIcon className="w-6 h-6 text-accent" /> Sign Up for More Generations
-      </h2>
-      <p className="text-gray-700 text-center mb-4">
-        You have used your <span className="font-semibold text-accent">5 free text</span> and <span className="font-semibold text-amber-600">5 free image</span> generations.<br/>
-        <span className="block mt-2">Sign up to unlock <span className="font-semibold text-accent">20 text</span> and <span className="font-semibold text-amber-600">15 image</span> generations!</span>
-      </p>
-      <a
-        href="https://qybrrlabs.africa/login"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full text-center bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-full transition-colors duration-150 mb-2 shadow-lg text-lg"
-      >
-        Sign Up Now
-      </a>
-      <button
-        onClick={() => setShowSignupPrompt(false)}
-        className="w-full mt-2 text-sm text-gray-500 hover:text-accent underline"
-      >
-        Maybe later
-      </button>
-    </div>
-  </div>
-)}
-{/* --- End Signup Prompt Modal --- */}
 
       {/* --- NEW: User Usage Dashboard (v2) --- */}
       {userProfile && (
@@ -1040,9 +985,6 @@ export default function Home() {
                     <li className="flex items-center"><CheckIcon /> {PLAN_LIMITS.free.image} Image Generations</li>
                     <li className="flex items-center"><CheckIcon /> Basic Support</li>
                   </ul>
-                  <Link href="/redeem" className="mt-auto w-full text-center bg-accent hover:bg-accent-dark text-white font-medium py-2 px-4 rounded-md transition-colors duration-150">
-  Redeem Key
-</Link>
                 </motion.div>
 
                 {/* Pro Plan Card (Example) */}
