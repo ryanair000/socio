@@ -42,7 +42,7 @@ const PLAN_LIMITS = {
 };
 
 export async function POST(request) {
-  // Optional: Rate Limiting Check
+  try {
   if (ratelimit) {
     const identifier = request.ip ?? '127.0.0.1'; // Use IP address or a user ID if available
     const { success, limit, remaining, reset } = await ratelimit.limit(identifier);
@@ -215,4 +215,11 @@ export async function POST(request) {
         { status: 500 }
       );
     }
+  } catch (error) {
+    console.error('[API_ROUTE_ERROR]', error);
+    return Response.json(
+      { error: 'An unexpected error occurred. Please ensure you are logged in and try again.' },
+      { status: 500 }
+    );
+  }
 }
