@@ -1,4 +1,4 @@
-import Replicate from 'replicate';
+import OpenAI from "openai";
 import { kv } from '@vercel/kv';
 import { Ratelimit } from '@upstash/ratelimit'; // Optional: Add rate limiting
 import { createClient } from '../../../lib/supabase/server'; // <-- Add Supabase server client import
@@ -16,10 +16,9 @@ const ratelimit = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
     })
   : null;
 
-// --- Model IDs ---
-const TEXT_MODEL_ID = "microsoft/phi-3-mini-4k-instruct:e17386e6ae2e351f63783fa89f427fd0ed415524a7b3d8c122f6ac80ad0166b1";
-// Trying the version hash from Replicate docs example
-const IMAGE_MODEL_ID = "yorickvp/llava-13b:01359160a4cff57c6b7d4dc625d0019d390c7c46f553714069f114b392f4a726"; 
+// --- OpenAI Model IDs ---
+const OPENAI_TEXT_MODEL = "gpt-4o"; // or "gpt-4-turbo" for cheaper/faster
+// const OPENAI_IMAGE_MODEL = "dall-e-3"; // For future image support
 
 // --- Plan Limits --- 
 const PLAN_LIMITS = {
@@ -158,91 +157,62 @@ export async function POST(request) {
     );
   }
 
-  // --- Proceed with Generation (Limit check passed) ---
-  try {
-    // Initialize Replicate
-    if (!process.env.REPLICATE_API_KEY) {
-       throw new Error("Replicate API key is not configured.");
-    }
-    const replicate = new Replicate({
-      auth: process.env.REPLICATE_API_KEY,
-    });
-
-    let replicateInput = {};
-    let modelToRun = TEXT_MODEL_ID;
-    let promptForLlava = '';
-
-    if (inputType === 'text') {
-      const { topic, platform, tone } = requestData.prompt;
-      const textPrompt = `[INST] Generate a ${platform} caption in a ${tone} tone about the following topic: ${topic}. Keep it concise and engaging. [/INST]`;
-      console.log(`[TEXT_MODE] Prompt: ${textPrompt}`);
-      replicateInput = {
-        prompt: textPrompt,
-        max_new_tokens: 175,
-        temperature: 0.65,
-      };
-    } else { // inputType === 'image'
-      const { platform, tone, category, keywords, name } = requestData.prompt;
-      const { imageData } = requestData; // imageData is expected to be a Data URI (e.g., "data:image/jpeg;base64,...")
-      modelToRun = IMAGE_MODEL_ID;
-      // ---> Conditionally add keywords and name to the prompt
-      let keywordInstruction = keywords ? ` Include keywords: ${keywords}.` : '';
-      let nameInstruction = name ? ` The subject's name is ${name}.` : ''; // Add name instruction
-      promptForLlava = `Generate a ${platform} caption for this image, which is related to ${category}, in a ${tone} tone.${nameInstruction}${keywordInstruction} Focus on the main subject and action. Keep it concise.`;
-      console.log(`[IMAGE_MODE] Prompt: ${promptForLlava}`);
-      replicateInput = {
-        image: imageData,
-        prompt: promptForLlava, 
-        max_tokens: 100, // LLaVA uses max_tokens, adjust as needed
-        temperature: 0.2 // LLaVA examples often use lower temperature
-      };
-    }
-
-    console.log(`[REPLICATE_CALL] Model: ${modelToRun}`);
-
-    // Call Replicate API
-    const output = await replicate.run(modelToRun, { input: replicateInput });
-
-    // Process output (LLaVA returns an array of strings)
-    const generatedCaption = Array.isArray(output) ? output.join('').trim() : String(output).trim();
-    console.log(`[REPLICATE_SUCCESS] Caption: ${generatedCaption}`);
-
-    if (!generatedCaption) {
+    // --- Proceed with Generation (Limit check passed) ---
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error("OpenAI API key is not configured.");
+      }
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      let generatedCaption = "";
+      if (inputType === 'text') {
+        const { topic, platform, tone } = requestData.prompt;
+        let textPrompt = `Generate a ${platform} caption in a ${tone} tone about the following topic: ${topic}. Keep it concise and engaging.`;
+        if (requestData.kenyanize) {
+          textPrompt += ' Kenyanize the caption: use Kenyan slang, references, and local style.';
+        }
+        console.log(`[OPENAI_TEXT] Prompt: ${textPrompt}`);
+        const completion = await openai.chat.completions.create({
+          model: OPENAI_TEXT_MODEL,
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant that writes catchy and concise social media captions.' },
+            { role: 'user', content: textPrompt },
+          ],
+          max_tokens: 175,
+          temperature: 0.65,
+        });
+        generatedCaption = completion.choices[0]?.message?.content?.trim() || '';
+      } else if (inputType === 'image') {
+        // For future: add Kenyanize logic to image prompt
+        const { platform, tone, category, keywords, name } = requestData.prompt;
+        const { imageData } = requestData;
+        let keywordInstruction = keywords ? ` Include keywords: ${keywords}.` : '';
+        let nameInstruction = name ? ` The subject's name is ${name}.` : '';
+        let kenyanizeInstruction = requestData.kenyanize ? ' Kenyanize the caption: use Kenyan slang, references, and local style.' : '';
+        let promptForImage = `Generate a ${platform} caption for this image, which is related to ${category}, in a ${tone} tone.${nameInstruction}${keywordInstruction}${kenyanizeInstruction} Focus on the main subject and action. Keep it concise.`;
+        // Image captioning not yet supported, but prompt is ready for future
+        throw new Error('Image captioning is not yet supported with OpenAI backend.');
+      }
+      if (!generatedCaption) {
         throw new Error("AI returned an empty caption.");
-    }
-
-    // --- SUCCESS: Increment Usage Count --- 
-    console.log(`[USAGE_INCREMENT] User: ${user.id}, Plan: ${plan}, Type: ${inputType}`);
-    let incrementColumn = inputType === 'text' ? 'monthly_text_generations_used' : 'monthly_image_generations_used';
-    
-    // Merge increments with potential reset updates
-    updates[incrementColumn] = (inputType === 'text' ? monthly_text_generations_used : monthly_image_generations_used) + 1;
-    updates.updated_at = new Date(); // Ensure updated_at is set
-
-    // Use the existing supabase client
-    const { error: updateError } = await supabase
+      }
+      // --- SUCCESS: Increment Usage Count --- 
+      let incrementColumn = inputType === 'text' ? 'monthly_text_generations_used' : 'monthly_image_generations_used';
+      updates[incrementColumn] = (inputType === 'text' ? monthly_text_generations_used : monthly_image_generations_used) + 1;
+      updates.updated_at = new Date();
+      const { error: updateError } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
-
-    if (updateError) {
-        // Log error but still return caption as generation succeeded
+      if (updateError) {
         console.error(`[USAGE_UPDATE_ERROR] User: ${user.id}, Failed to increment ${incrementColumn}:`, updateError);
+      }
+      return Response.json({ caption: generatedCaption });
+    } catch (error) {
+      console.error('[AI_ERROR]', error);
+      const errorMessage = error.response?.data?.detail || error.message || "Caption generation failed. Please try again.";
+      return Response.json(
+        { error: errorMessage },
+        { status: 500 }
+      );
     }
-    // --- End Increment Usage Count ---
-
-    return Response.json({ caption: generatedCaption });
-
-  } catch (error) {
-    console.error('[AI_ERROR]', error);
-    const errorMessage = error.response?.data?.detail || error.message || "Caption generation failed. Please try again.";
-    
-    // Check for specific Replicate model errors if needed
-    // if (errorMessage.includes(...)) { ... }
-
-    return Response.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
-  }
-} 
+}

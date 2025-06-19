@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import RedeemKeyDialog from './components/RedeemKeyDialog' // Updated path for app directory
 import { createClient } from '../lib/supabase/client'
 import {
   ChatBubbleLeftRightIcon,
@@ -119,6 +120,9 @@ const TRIAL_LIMITS = {
 };
 
 export default function Home() {
+  // ...existing state
+  const [kenyanize, setKenyanize] = useState(false);
+  const [showRedeemDialog, setShowRedeemDialog] = useState(false);
   const supabase = createClient(); // <-- Initialize Supabase client
   const router = useRouter(); // <-- Add useRouter for logout redirect
 
@@ -342,6 +346,10 @@ export default function Home() {
     // --- END NEW CREDIT CHECK ---
 
     let requestBody = {};
+    // Add kenyanize flag to request body
+    if (kenyanize) {
+      requestBody.kenyanize = true;
+    }
 
     if (inputMode === 'text') {
     if (!topic.trim()) {
@@ -492,26 +500,30 @@ export default function Home() {
              {/* Auth Link/Button */}
              <div className="border-l border-gray-200 pl-4 md:pl-6">
               {loadingProfile ? (
-                 <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div> // Loading state
-              ) : userProfile ? (
-                <button
-                  onClick={handleLogout}
-                  disabled={isLoading}
-                  className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
-                 >
-                  <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
-                  Logout
-                 </button>
-              ) : (
-                 <Link href="/redeem" className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-4 py-2 rounded shadow transition-colors">
-  <BoltIcon className="w-5 h-5 mr-1" />
-  Redeem Key
-</Link>
-              )}
+  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div> // Loading state
+) : userProfile ? (
+  <button
+    onClick={handleLogout}
+    disabled={isLoading}
+    className="flex items-center text-sm font-medium text-gray-600 hover:text-accent transition-colors disabled:opacity-50"
+  >
+    <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-1" />
+    Logout
+  </button>
+) : (
+  <button
+    onClick={() => setShowRedeemDialog(true)}
+    className="flex items-center text-sm font-medium text-white bg-accent hover:bg-accent-dark px-4 py-2 rounded shadow transition-colors"
+  >
+    <BoltIcon className="w-5 h-5 mr-1" />
+    Redeem Key
+  </button>
+)}
              </div>
           </nav>
         </div>
       </header>
+<RedeemKeyDialog open={showRedeemDialog} onClose={() => setShowRedeemDialog(false)} />
 
       {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
@@ -725,7 +737,20 @@ export default function Home() {
                </div>
           </div>
 
-            {/* Generate Button - Gradient Background */}
+            {/* Kenyanize Toggle */}
+<div className="flex items-center space-x-2 mb-2">
+  <input
+    id="kenyanize-toggle"
+    type="checkbox"
+    checked={kenyanize}
+    onChange={e => setKenyanize(e.target.checked)}
+    className="accent-accent h-4 w-4 rounded border-gray-300 focus:ring-accent"
+  />
+  <label htmlFor="kenyanize-toggle" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
+    Kenyanize (use Kenyan slang & local style)
+  </label>
+</div>
+{/* Generate Button - Gradient Background */}
           <button
             onClick={handleGenerateCaption} 
               disabled={isLoading || (inputMode === 'text' && !topic.trim()) || (inputMode === 'image' && (!resizedImageData || !imageCategory))}
