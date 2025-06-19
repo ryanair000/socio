@@ -168,7 +168,11 @@ export async function POST(request) {
     return Response.json({ caption: generatedCaption });
 
   } catch (error) {
-    console.error('[AI_ERROR]', error);
-    return Response.json({ error: error.message || "Caption generation failed." }, { status: 500 });
+    console.error('[AI_ERROR]', JSON.stringify(error, null, 2));
+    const errorMessage = error.response?.data?.detail || error.message || "Caption generation failed. Please try again.";
+    return Response.json(
+        { error: errorMessage },
+        { status: 500 }
+    );
   }
 }
