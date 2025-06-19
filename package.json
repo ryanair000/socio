@@ -10,8 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@paypal/checkout-server-sdk": "^1.0.3",
-    "@paypal/paypal-js": "^8.2.0",
+
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
     "@upstash/ratelimit": "^2.0.5",
