@@ -1,6 +1,5 @@
 import OpenAI from "openai";
-import { kv } from '@vercel/kv';
-import { Ratelimit } from '@upstash/ratelimit'; // Optional: Add rate limiting
+
 import { createClient } from '../../../lib/supabase/server'; // <-- Add Supabase server client import
 import { NextResponse } from 'next/server'; // <-- Add NextResponse import
 
@@ -34,28 +33,7 @@ const PLAN_LIMITS = {
 };
 
 export async function POST(request) {
-  // --- Rate Limiter Initialization (Lazy) ---
-  const ratelimit = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
-    ? new Ratelimit({
-        redis: kv,
-        limiter: Ratelimit.slidingWindow(5, '1 m'),
-        analytics: true,
-        prefix: '@upstash/ratelimit',
-      })
-    : null;
 
-  if (ratelimit) {
-    try {
-      const identifier = request.ip ?? '127.0.0.1';
-      const { success } = await ratelimit.limit(identifier);
-      if (!success) {
-        return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-      }
-    } catch (error) {
-      console.error("[RATELIMIT_ERROR]", error);
-      // Do not block requests if rate limiter fails
-    }
-  }
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -153,8 +131,42 @@ export async function POST(request) {
       });
       generatedCaption = completion.choices[0]?.message?.content?.trim() || '';
     } else if (inputType === 'image') {
-      // Image generation logic remains unchanged, currently returns error
-      throw new Error('Image captioning is not yet supported with OpenAI backend.');
+      const { platform, tone, category, keywords, name } = requestData.prompt;
+      const { imageData } = requestData;
+
+      let visionPrompt = `Analyze the provided image and generate a social media caption for the ${platform} platform. The desired tone is ${tone}. The image can be described as '${category}'.`;
+      if (keywords) {
+        visionPrompt += ` Pay special attention to these keywords: '${keywords}'.`;
+      }
+      if (name) {
+        visionPrompt += ` The person in the image is named ${name}.`;
+      }
+      visionPrompt += ' Keep the caption concise, engaging, and ready to post.';
+
+      if (requestData.kenyanize) {
+        visionPrompt += ' Kenyanize the caption: use Kenyan slang, references, and local style.';
+      }
+
+      const visionCompletion = await openai.chat.completions.create({
+        model: "gpt-4o", // Use a vision-capable model
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: visionPrompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageData,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 175,
+        temperature: 0.65,
+      });
+      generatedCaption = visionCompletion.choices[0]?.message?.content?.trim() || '';
     }
 
     if (!generatedCaption) throw new Error("AI returned an empty caption.");

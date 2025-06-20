@@ -365,6 +365,7 @@ export default function Home() {
         return;
       }
       requestBody = {
+        ...requestBody,
         type: 'text',
         prompt: {
           topic: topic,
@@ -384,6 +385,7 @@ export default function Home() {
         return;
       }
       requestBody = {
+        ...requestBody,
         type: 'image',
         imageData: resizedImageData,
         prompt: {
