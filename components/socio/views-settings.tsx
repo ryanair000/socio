@@ -1,9 +1,22 @@
-import { useState } from "react";
-import { Link2 } from "lucide-react";
-import { Badge, Btn, Card, Field, Notice, SettingsTabs, Shell, cx } from "./ui";
+import { useEffect, useState } from "react";
+import { Link2, RefreshCw } from "lucide-react";
+import {
+  Badge,
+  Btn,
+  Card,
+  Field,
+  Notice,
+  SettingsTabs,
+  Shell,
+  cx,
+} from "./ui";
+import type { IntegrationHealth } from "./views-auth";
 
 export function SettingsView({ kind }: { kind: string }) {
   const [notice, setNotice] = useState("");
+  const [health, setHealth] = useState<IntegrationHealth | null>(null);
+  const [healthError, setHealthError] = useState("");
+  const [loadingHealth, setLoadingHealth] = useState(false);
   const [notificationEnabled, setNotificationEnabled] = useState([
     true,
     true,
@@ -11,49 +24,150 @@ export function SettingsView({ kind }: { kind: string }) {
     false,
     true,
   ]);
-  if (kind === "integrations")
+
+  async function loadHealth() {
+    setLoadingHealth(true);
+    setHealthError("");
+    try {
+      const response = await fetch("/api/integrations/status", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Connection check failed.");
+      setHealth(data);
+    } catch (reason) {
+      setHealthError(
+        reason instanceof Error ? reason.message : "Connection check failed.",
+      );
+    } finally {
+      setLoadingHealth(false);
+    }
+  }
+
+  useEffect(() => {
+    if (kind === "integrations") void loadHealth();
+  }, [kind]);
+
+  if (kind === "integrations") {
+    const accountRows = (health?.accounts || []).flatMap((account) => [
+      {
+        name: `${account.name} Facebook`,
+        description: account.facebook.label || "Facebook Page publishing",
+        configured: account.facebook.configured,
+        healthy: account.facebook.healthy,
+      },
+      {
+        name: `${account.name} Instagram`,
+        description:
+          account.instagram.label || "Instagram professional publishing",
+        configured: account.instagram.configured,
+        healthy: account.instagram.healthy,
+      },
+    ]);
+    const serviceRows = [
+      {
+        name: "OpenAI",
+        description: "Image-aware caption generation",
+        configured: Boolean(health?.services?.openai?.configured),
+        healthy: health?.services?.openai?.healthy,
+      },
+      {
+        name: "Telegram",
+        description: `Secure content intake${
+          health?.services?.telegram?.allowedChatCount != null
+            ? ` • ${health.services.telegram.allowedChatCount} approved chats`
+            : ""
+        }`,
+        configured: Boolean(health?.services?.telegram?.configured),
+        healthy: health?.services?.telegram?.healthy,
+      },
+      {
+        name: "Meta App",
+        description: `Token refresh support${
+          health?.graphVersion ? ` • Graph ${health.graphVersion}` : ""
+        }`,
+        configured: Boolean(health?.services?.metaApp?.configured),
+        healthy: health?.services?.metaApp?.healthy,
+      },
+      {
+        name: "Administrator session",
+        description: "SMMPRO-backed authentication bridge",
+        configured: Boolean(health?.services?.auth?.configured),
+        healthy: Boolean(health),
+      },
+    ];
+    const rows = [...accountRows, ...serviceRows];
+
     return (
       <Shell
         route="settings/integrations"
         title="Integrations & Token Health"
-        description="Monitor Meta, storage, AI, catalogue and webhooks."
+        description="Live status from the existing SMMPRO Vercel project. Secret values remain server-only."
+        actions={
+          <Btn kind="secondary" onClick={loadHealth} disabled={loadingHealth}>
+            <RefreshCw size={17} aria-hidden="true" />
+            {loadingHealth ? "Checking…" : "Refresh health"}
+          </Btn>
+        }
       >
         <SettingsTabs active="integrations" />
-        {notice && (
+        {healthError && (
           <div className="mb-5">
-            <Notice>{notice}</Notice>
+            <Notice tone="red">{healthError}</Notice>
+          </div>
+        )}
+        {health && (
+          <div className="mb-5">
+            <Notice>
+              Socio is connected to {health.source || "SMMPRO"}. Credentials
+              are used in place and never copied into the browser or repository.
+            </Notice>
           </div>
         )}
         <div className="grid gap-4 md:grid-cols-2">
-          {[
-            ["Meta Business", "Facebook and Instagram publishing", "Healthy"],
-            ["Media Storage", "Public publishing assets", "Healthy"],
-            ["ChezaHub Catalogue", "Products, price and stock", "Healthy"],
-            ["OpenAI", "Caption assistance", "Healthy"],
-            ["Telegram", "Content intake and alerts", "Offline"],
-            ["Webhook signing", "Secure event verification", "Healthy"],
-          ].map(([a, b, c]) => (
-            <Card key={a} className="p-5">
-              <div className="flex justify-between">
-                <div className="rounded-xl bg-slate-100 p-3">
-                  <Link2 aria-hidden="true" />
+          {rows.length ? (
+            rows.map((row) => (
+              <Card key={row.name} className="p-5">
+                <div className="flex justify-between gap-3">
+                  <div className="rounded-xl bg-slate-100 p-3">
+                    <Link2 aria-hidden="true" />
+                  </div>
+                  <Badge
+                    t={
+                      row.healthy
+                        ? "green"
+                        : row.configured
+                          ? "amber"
+                          : "red"
+                    }
+                  >
+                    {row.healthy
+                      ? "Healthy"
+                      : row.configured
+                        ? "Configured"
+                        : "Missing"}
+                  </Badge>
                 </div>
-                <Badge t={c === "Healthy" ? "green" : "slate"}>{c}</Badge>
-              </div>
-              <b className="mt-4 block">{a}</b>
-              <p className="mt-1 text-sm text-slate-500">{b}</p>
-              <Btn
-                kind="secondary"
-                className="mt-5"
-                onClick={() => setNotice(`${a} connection settings opened.`)}
-              >
-                Manage
-              </Btn>
+                <b className="mt-4 block">{row.name}</b>
+                <p className="mt-1 text-sm text-slate-500">
+                  {row.description}
+                </p>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-6 md:col-span-2">
+              <p className="text-sm text-slate-500">
+                {loadingHealth
+                  ? "Checking Meta, OpenAI and Telegram connections…"
+                  : "Sign in with the SMMPRO administrator account to load live connection health."}
+              </p>
             </Card>
-          ))}
+          )}
         </div>
       </Shell>
     );
+  }
+
   if (kind === "brand")
     return (
       <Shell
@@ -109,6 +223,7 @@ export function SettingsView({ kind }: { kind: string }) {
         </div>
       </Shell>
     );
+
   const notifications = [
     ["Publishing failures", "Immediate", "Email + in-app"],
     ["Approval requests", "Immediate", "In-app"],
@@ -147,7 +262,9 @@ export function SettingsView({ kind }: { kind: string }) {
               aria-pressed={notificationEnabled[i]}
               onClick={() =>
                 setNotificationEnabled((current) =>
-                  current.map((value, index) => (index === i ? !value : value)),
+                  current.map((value, index) =>
+                    index === i ? !value : value,
+                  ),
                 )
               }
               className={cx(

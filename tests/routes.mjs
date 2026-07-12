@@ -26,10 +26,10 @@ const cases = {
 };
 
 const failures = [];
-const output = path.resolve("out");
+const output = path.resolve(".next/server/pages");
 for (const [route, heading] of Object.entries(cases)) {
   const file = route
-    ? path.join(output, route, "index.html")
+    ? path.join(output, `${route}.html`)
     : path.join(output, "index.html");
   if (!fs.existsSync(file)) {
     failures.push(`${route || "/"}: missing ${file}`);
@@ -53,7 +53,7 @@ for (const [route, heading] of Object.entries(cases)) {
 const allHtml = Object.keys(cases)
   .map((route) => {
     const file = route
-      ? path.join(output, route, "index.html")
+      ? path.join(output, `${route}.html`)
       : path.join(output, "index.html");
     return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   })
@@ -63,7 +63,7 @@ const links = [...allHtml.matchAll(/href="\/(?!_next)([^"?#]*)/g)].map(
 );
 for (const link of new Set(links)) {
   if (!link) continue;
-  const target = path.join(output, link, "index.html");
+  const target = path.join(output, `${link}.html`);
   if (!fs.existsSync(target)) failures.push(`broken internal route: /${link}`);
 }
 
@@ -73,5 +73,5 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `Verified ${Object.keys(cases).length} static routes and ${new Set(links).size} internal links.`,
+  `Verified ${Object.keys(cases).length} production routes and ${new Set(links).size} internal links.`,
 );

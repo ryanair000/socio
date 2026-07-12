@@ -7,11 +7,29 @@ Socio is a responsive social-media operations platform for planning, creating, a
 - Production: https://socio-beryl.vercel.app
 - Figma: https://www.figma.com/design/EGJFVPismQhDS33thnk7I1
 
+## SMMPRO integration
+
+Socio uses the existing SMMPRO deployment as a protected publishing backend. Meta, OpenAI and Telegram credentials remain in the `fb-poster` Vercel project and are never copied into the browser or committed to this repository.
+
+Configure only the backend URL in Socio:
+
+```env
+SMMPRO_BASE_URL=https://smmpro.lokimax.top
+```
+
+After signing in with the administrator account configured in SMMPRO, Socio can:
+
+- Read live connection health for ChezaHub and JengaSites
+- Generate image-aware captions through the existing OpenAI key
+- Publish to Facebook Pages and Instagram through the existing Meta tokens
+- Preserve the existing Telegram webhook workflow in SMMPRO
+
 ## Included
 
 - Command Centre and weekly planner
 - Campaign and content-board workflows
 - Product-aware Creative Studio
+- Real caption generation and publishing through SMMPRO
 - Approvals and safe publishing retries
 - Assets, product feed and engagement inbox
 - Analytics and social-sales attribution
@@ -23,6 +41,7 @@ Socio is a responsive social-media operations platform for planning, creating, a
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -42,8 +61,4 @@ Run the complete review suite with:
 npm run check
 ```
 
-The suite covers component interactions, form guardrails, accessibility, independent workflow controls, static-route generation and internal-link integrity.
-
-## Release scope
-
-The current public release uses realistic demo data and browser-local interactions. Production Meta publishing, OpenAI generation, durable database records, asset storage and ChezaHub order attribution require protected backend credentials and are intentionally not embedded in the public repository.
+The public repository contains no Meta, OpenAI, Telegram or administrator secret values.

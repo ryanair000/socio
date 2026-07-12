@@ -1,42 +1,51 @@
 # Tests
 
-## Test 1 - Login reaches workspace setup [sanity]
+## Test 1 - Login connects Socio to SMMPRO [sanity]
 Viewport: desktop
-Description: Confirms valid demo credentials start the Socio onboarding workflow.
+Description: Confirms valid administrator credentials are sent to the secure Socio bridge.
 Steps:
-1. Open the app
-2. Keep the demo email and password
-3. Click "Sign in to Socio"
-Expected: Navigation targets the workspace setup page and a demo session is stored.
+1. Open Socio
+2. Enter the SMMPRO administrator email and password
+3. Click "Connect Socio to SMMPRO"
+Expected: Socio opens the dashboard and stores only a local connection marker; no provider secret is exposed.
 
 ## Test 2 - Login guardrails reject invalid credentials
 Viewport: mobile
-Description: Confirms both email and password validation messages are available.
+Description: Confirms email and password validation messages remain available.
 Steps:
 1. Enter an invalid email and submit
 2. Enter a valid email and clear the password
 3. Submit again
-Expected: Socio shows the relevant validation message and does not continue.
+Expected: Socio shows the relevant validation message and does not call the backend.
 
-## Test 3 - Core planning and approval workflow works
+## Test 3 - Integration health comes from SMMPRO
 Viewport: desktop
-Description: Confirms content can move from planning through publishing recovery.
+Description: Confirms Meta, OpenAI and Telegram health is displayed from the protected upstream endpoint.
 Steps:
-1. Open the weekly planner and select "Add Post"
-2. Save the creative draft and send it for approval
-3. Approve the post, open the publishing job and retry the failed target
-Expected: Socio confirms the draft, approval submission and successful platform retry without duplicating Facebook.
+1. Sign in
+2. Open Integrations & Token Health
+3. Refresh health
+Expected: ChezaHub and JengaSites platform connections display configured or healthy states without showing token values.
 
-## Test 4 - Content and engagement actions update visibly
+## Test 4 - Caption generation and publishing use existing credentials
 Viewport: desktop
-Description: Confirms common demo actions result in durable visible feedback.
+Description: Confirms Socio can generate a caption and publish using the SMMPRO backend.
+Steps:
+1. Open Creative Studio
+2. Add an image and click "Generate Caption"
+3. Choose publishing targets and click "Publish Now"
+Expected: The caption is returned, the publish request succeeds, and the publishing job displays platform results.
+
+## Test 5 - Content and engagement actions update visibly
+Viewport: desktop
+Description: Confirms common workspace actions still provide visible feedback.
 Steps:
 1. Add a new idea on the Content Board
 2. Send a reply in the Engagement Inbox
 3. Invite a team member
 Expected: The new idea, reply and invitation confirmation are visible.
 
-## Test 5 - Automation switches are independent
+## Test 6 - Automation switches are independent
 Viewport: desktop
 Description: Confirms changing one automation does not change every rule.
 Steps:
@@ -45,20 +54,11 @@ Steps:
 3. Inspect the restock rule
 Expected: The price-drop rule is disabled while the restock rule remains enabled and the active-rule count decreases by one.
 
-## Test 6 - Settings are discoverable and save feedback
+## Test 7 - Production routes and API build are complete
 Viewport: desktop
-Description: Confirms integrations, brand and notification settings are connected through visible tabs.
-Steps:
-1. Open Notification Preferences
-2. Enable the daily digest
-3. Click "Save preferences"
-Expected: The notification switch changes independently and Socio confirms the preferences were saved.
-
-## Test 7 - Static production routes are complete
-Viewport: desktop
-Description: Confirms every documented route is exported and all internal links resolve.
+Description: Confirms every documented page and the server-side bridge build successfully.
 Steps:
 1. Run the production build
 2. Run `npm run test:routes`
 3. Review the route report
-Expected: All 21 routes and internal links pass without missing pages or template placeholders.
+Expected: All application routes and internal links pass and the API routes compile without template placeholders.

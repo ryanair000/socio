@@ -1,11 +1,35 @@
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, UploadCloud } from "lucide-react";
 import { Badge, Btn, Card, LinkButton, Notice, Shell, cx } from "./ui";
 import type { Tone } from "./ui";
 
 export function Publishing() {
   const [status, setStatus] = useState("Partially published");
+  const [results, setResults] = useState<Array<{ target: string; status: string; id?: string }>>([]);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("socio-last-publish");
+      if (!stored) return;
+      const data = JSON.parse(stored);
+      const latest = Array.isArray(data.results) ? data.results : [];
+      setResults(latest);
+      if (latest.length && latest.every((item: { status?: string }) => item.status === "Success")) {
+        setStatus("Published");
+      }
+    } catch {
+      // Keep the safe demo state when no recent job is available.
+    }
+  }, []);
+
+  const displayedResults = results.length
+    ? results
+    : [
+        { target: "Facebook Page", status: "Success" },
+        { target: "Instagram", status: status === "Published" ? "Success" : "Failed" },
+      ];
+
   return (
     <Shell
       route="publishing"
@@ -28,25 +52,22 @@ export function Publishing() {
           : "Facebook is live; Instagram failed. Retrying targets Instagram only."}
       </div>
       <Card className="mt-5 overflow-hidden">
-        {[
-          ["Facebook Page", "1 of 3", "Published", "green"],
-          [
-            "Instagram",
-            "2 of 3",
-            status === "Published" ? "Published" : "Failed",
-            status === "Published" ? "green" : "red",
-          ],
-        ].map(([a, b, c, d]) => (
-          <div
-            key={a}
-            className="grid gap-3 border-b border-slate-100 p-5 last:border-0 md:grid-cols-[1.2fr_1fr_1fr_120px] md:items-center"
-          >
-            <b>{a}</b>
-            <span className="text-slate-500">{b}</span>
-            <Badge t={d as Tone}>{c}</Badge>
-            <Btn kind="secondary">Open logs</Btn>
-          </div>
-        ))}
+        {displayedResults.map((item, index) => {
+          const successful = item.status === "Success" || item.status === "Published";
+          return (
+            <div
+              key={`${item.target}-${index}`}
+              className="grid gap-3 border-b border-slate-100 p-5 last:border-0 md:grid-cols-[1.2fr_1fr_1fr_120px] md:items-center"
+            >
+              <b>{item.target}</b>
+              <span className="text-slate-500">Attempt {index + 1}</span>
+              <Badge t={(successful ? "green" : "red") as Tone}>
+                {successful ? "Published" : item.status}
+              </Badge>
+              <Btn kind="secondary">Open logs</Btn>
+            </div>
+          );
+        })}
       </Card>
       <Card className="mt-5 p-6">
         <h2 className="text-xl font-bold">Duplicate protection active</h2>

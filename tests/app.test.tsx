@@ -1,10 +1,10 @@
 import React from "react";
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import App from "../pages/[...slug]";
-import { routerPush } from "./setup";
+import { fetchMock, routerPush } from "./setup";
 
 const renderRoute = (route: string) => render(<App route={route} />);
 
@@ -17,7 +17,7 @@ describe("Socio release", () => {
 
     await user.clear(email);
     await user.type(email, "invalid");
-    await user.click(screen.getByRole("button", { name: "Sign in to Socio" }));
+    await user.click(screen.getByRole("button", { name: "Connect Socio to SMMPRO" }));
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Enter a valid email address.",
     );
@@ -26,29 +26,32 @@ describe("Socio release", () => {
     await user.clear(email);
     await user.type(email, "boss@socio.app");
     await user.clear(password);
-    await user.click(screen.getByRole("button", { name: "Sign in to Socio" }));
+    await user.click(screen.getByRole("button", { name: "Connect Socio to SMMPRO" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Enter your password");
     expect(routerPush).not.toHaveBeenCalled();
   });
 
-  it("starts onboarding after valid login", async () => {
+  it("connects to SMMPRO after valid login", async () => {
     const user = userEvent.setup();
     renderRoute("login");
-    await user.click(screen.getByRole("button", { name: "Sign in to Socio" }));
-    expect(routerPush).toHaveBeenCalledWith("/onboarding/workspace");
-    expect(localStorage.getItem("socio-session")).toBe("demo");
+    await user.type(screen.getByLabelText("Email address"), "admin@example.com");
+    await user.type(screen.getByLabelText("Password"), "strong-password");
+    await user.click(
+      screen.getByRole("button", { name: "Connect Socio to SMMPRO" }),
+    );
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/dashboard"));
+    expect(localStorage.getItem("socio-session")).toBe("smmpro");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
-  it("connects workspace channels independently", async () => {
-    const user = userEvent.setup();
+  it("loads live SMMPRO connection health", async () => {
     renderRoute("onboarding/connections");
-    const meta = screen.getAllByRole("button", { name: "Connect" })[0];
-    await user.click(meta);
-    expect(meta).toHaveTextContent("Manage");
-    expect(meta).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getAllByRole("button", { name: "Connect" }).length,
-    ).toBeGreaterThan(0);
+    expect(await screen.findByText("ChezaHub Facebook")).toBeInTheDocument();
+    expect(screen.getByText("JengaSites Instagram")).toBeInTheDocument();
+    expect(screen.getByText(/Connected to SMMPRO/)).toBeInTheDocument();
   });
 
   it("adds a new content idea", async () => {
@@ -58,14 +61,20 @@ describe("Socio release", () => {
     expect(screen.getByText("Community poll 4")).toBeInTheDocument();
   });
 
-  it("saves and submits creative work with visible feedback", async () => {
+  it("generates a caption and publishes through the SMMPRO bridge", async () => {
     const user = userEvent.setup();
     renderRoute("studio/post-1");
-    await user.click(screen.getByRole("button", { name: "Save Draft" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Draft saved");
-    await user.click(screen.getByRole("button", { name: "Send for Approval" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Sent for approval successfully",
+    const file = new File(["poster"], "poster.jpg", { type: "image/jpeg" });
+    await user.upload(screen.getByLabelText(/Add artwork/), file);
+    await user.click(screen.getByRole("button", { name: "Generate Caption" }));
+    expect(await screen.findByDisplayValue("Generated caption from SMMPRO.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Publish Now" }));
+    await waitFor(() =>
+      expect(routerPush).toHaveBeenCalledWith("/publishing/job-1"),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/publish",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import {
   BarChart3,
@@ -286,6 +287,7 @@ export function Shell({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -322,13 +324,21 @@ export function Shell({
             </Link>
           ))}
         </nav>
-        <Link
-          href="/login"
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch("/api/logout", { method: "POST" });
+            } finally {
+              localStorage.removeItem("socio-session");
+              await router.push("/login");
+            }
+          }}
           className="mt-auto flex gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <LogOut size={18} aria-hidden="true" />
           Sign out
-        </Link>
+        </button>
       </aside>
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:left-64 lg:px-6">
         <button
