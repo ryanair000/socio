@@ -1,0 +1,64 @@
+# Tests
+
+## Test 1 - Login screen and demo access load [sanity]
+Viewport: desktop
+Description: Verifies Socio loads with its access portal and a route into the demo.
+Steps:
+1. Navigate to the app
+2. Confirm Welcome back and Sign in to Socio are visible
+3. Select Open demo dashboard
+Expected: The Command Centre appears with Planned this week and Attributed revenue metrics.
+
+## Test 2 - Onboarding advances to connections
+Viewport: desktop
+Description: Verifies the workspace setup workflow is navigable.
+Steps:
+1. Open /onboarding/workspace/
+2. Confirm ChezaHub workspace defaults are visible
+3. Select Continue to connections
+Expected: Connect your channels is visible with Meta Business and ChezaHub Catalogue cards.
+
+## Test 3 - Planner opens Creative Studio
+Viewport: desktop
+Description: Verifies the primary content-planning workflow.
+Steps:
+1. Open /planner/
+2. Confirm all seven weekday cards are visible
+3. Select Add Post
+Expected: Creative Studio opens with the Spider-Man 2 product brief and poster preview.
+
+## Test 4 - Publishing retry changes visible state
+Viewport: desktop
+Description: Verifies the platform-specific retry guardrail.
+Steps:
+1. Open /publishing/job-1/
+2. Confirm Facebook is Published and Instagram is Failed
+3. Select Retry failed target
+Expected: A success message says content published to Facebook and Instagram without duplicating Facebook.
+
+## Test 5 - Engagement conversation selection works
+Viewport: desktop
+Description: Verifies inbox navigation and buying-intent context.
+Steps:
+1. Open /engagement/
+2. Select Aisha K.
+3. Read the active conversation panel
+Expected: The panel shows Aisha K. and the question about the account region.
+
+## Test 6 - Mobile bottom navigation is usable
+Viewport: mobile
+Description: Verifies mobile-first navigation.
+Steps:
+1. Open /dashboard/ at mobile width
+2. Confirm the fixed Home, Plan, Create, Inbox and More navigation
+3. Select Plan
+Expected: Weekly Planner loads without horizontal page overflow.
+
+## Test 7 - Invalid sign-in email is rejected
+Viewport: mobile
+Description: Verifies a visible form validation guardrail.
+Steps:
+1. Open /login/
+2. Replace the email with invalid
+3. Select Sign in to Socio
+Expected: A red message asks for a valid email address and the user remains on the login page.

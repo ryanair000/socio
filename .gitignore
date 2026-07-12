@@ -1,22 +1,6 @@
-# Dependencies
-node_modules/
-
-# Build output
-.next/
-
-# Environment variables
-.env*
-!/.env.example
-
-# Backup directory
-backup_*
-
-# OS generated files
+node_modules
+.next
+out
+.vercel
+*.log
 .DS_Store
-*.pem
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log* 
