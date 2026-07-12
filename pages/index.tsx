@@ -1,2 +1,5 @@
-import SocioApp from './[...slug]';
-export default function Home() { return <SocioApp route='login' />; }
+import SocioApp from "./[...slug]";
+
+export default function Home() {
+  return <SocioApp route="login" />;
+}

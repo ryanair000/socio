@@ -1,64 +1,64 @@
 # Tests
 
-## Test 1 - Login screen and demo access load [sanity]
+## Test 1 - Login reaches workspace setup [sanity]
 Viewport: desktop
-Description: Verifies Socio loads with its access portal and a route into the demo.
+Description: Confirms valid demo credentials start the Socio onboarding workflow.
 Steps:
-1. Navigate to the app
-2. Confirm Welcome back and Sign in to Socio are visible
-3. Select Open demo dashboard
-Expected: The Command Centre appears with Planned this week and Attributed revenue metrics.
+1. Open the app
+2. Keep the demo email and password
+3. Click "Sign in to Socio"
+Expected: Navigation targets the workspace setup page and a demo session is stored.
 
-## Test 2 - Onboarding advances to connections
-Viewport: desktop
-Description: Verifies the workspace setup workflow is navigable.
-Steps:
-1. Open /onboarding/workspace/
-2. Confirm ChezaHub workspace defaults are visible
-3. Select Continue to connections
-Expected: Connect your channels is visible with Meta Business and ChezaHub Catalogue cards.
-
-## Test 3 - Planner opens Creative Studio
-Viewport: desktop
-Description: Verifies the primary content-planning workflow.
-Steps:
-1. Open /planner/
-2. Confirm all seven weekday cards are visible
-3. Select Add Post
-Expected: Creative Studio opens with the Spider-Man 2 product brief and poster preview.
-
-## Test 4 - Publishing retry changes visible state
-Viewport: desktop
-Description: Verifies the platform-specific retry guardrail.
-Steps:
-1. Open /publishing/job-1/
-2. Confirm Facebook is Published and Instagram is Failed
-3. Select Retry failed target
-Expected: A success message says content published to Facebook and Instagram without duplicating Facebook.
-
-## Test 5 - Engagement conversation selection works
-Viewport: desktop
-Description: Verifies inbox navigation and buying-intent context.
-Steps:
-1. Open /engagement/
-2. Select Aisha K.
-3. Read the active conversation panel
-Expected: The panel shows Aisha K. and the question about the account region.
-
-## Test 6 - Mobile bottom navigation is usable
+## Test 2 - Login guardrails reject invalid credentials
 Viewport: mobile
-Description: Verifies mobile-first navigation.
+Description: Confirms both email and password validation messages are available.
 Steps:
-1. Open /dashboard/ at mobile width
-2. Confirm the fixed Home, Plan, Create, Inbox and More navigation
-3. Select Plan
-Expected: Weekly Planner loads without horizontal page overflow.
+1. Enter an invalid email and submit
+2. Enter a valid email and clear the password
+3. Submit again
+Expected: Socio shows the relevant validation message and does not continue.
 
-## Test 7 - Invalid sign-in email is rejected
-Viewport: mobile
-Description: Verifies a visible form validation guardrail.
+## Test 3 - Core planning and approval workflow works
+Viewport: desktop
+Description: Confirms content can move from planning through publishing recovery.
 Steps:
-1. Open /login/
-2. Replace the email with invalid
-3. Select Sign in to Socio
-Expected: A red message asks for a valid email address and the user remains on the login page.
+1. Open the weekly planner and select "Add Post"
+2. Save the creative draft and send it for approval
+3. Approve the post, open the publishing job and retry the failed target
+Expected: Socio confirms the draft, approval submission and successful platform retry without duplicating Facebook.
+
+## Test 4 - Content and engagement actions update visibly
+Viewport: desktop
+Description: Confirms common demo actions result in durable visible feedback.
+Steps:
+1. Add a new idea on the Content Board
+2. Send a reply in the Engagement Inbox
+3. Invite a team member
+Expected: The new idea, reply and invitation confirmation are visible.
+
+## Test 5 - Automation switches are independent
+Viewport: desktop
+Description: Confirms changing one automation does not change every rule.
+Steps:
+1. Open Automations
+2. Disable the price-drop rule
+3. Inspect the restock rule
+Expected: The price-drop rule is disabled while the restock rule remains enabled and the active-rule count decreases by one.
+
+## Test 6 - Settings are discoverable and save feedback
+Viewport: desktop
+Description: Confirms integrations, brand and notification settings are connected through visible tabs.
+Steps:
+1. Open Notification Preferences
+2. Enable the daily digest
+3. Click "Save preferences"
+Expected: The notification switch changes independently and Socio confirms the preferences were saved.
+
+## Test 7 - Static production routes are complete
+Viewport: desktop
+Description: Confirms every documented route is exported and all internal links resolve.
+Steps:
+1. Run the production build
+2. Run `npm run test:routes`
+3. Review the route report
+Expected: All 21 routes and internal links pass without missing pages or template placeholders.
