@@ -30,6 +30,7 @@ After signing in with the administrator account configured in SMMPRO, Socio can:
 - Campaign and content-board workflows
 - Product-aware Creative Studio
 - Real caption generation and publishing through SMMPRO
+- Seven-day AI content planning
 - Approvals and safe publishing retries
 - Assets, product feed and engagement inbox
 - Analytics and social-sales attribution
@@ -62,3 +63,16 @@ npm run check
 ```
 
 The public repository contains no Meta, OpenAI, Telegram or administrator secret values.
+
+## Socio AI
+
+Socio can generate a complete seven-day ChezaHub content plan with headlines, captions, Story copy, CTAs, hashtags and platform recommendations using the OpenAI Responses API.
+
+Add these environment variables to the Socio Vercel project:
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+`OPENAI_MODEL` is optional. The API key is used only inside the server route and is never sent to the browser.
