@@ -1,173 +1,403 @@
 import React from "react";
-import { describe, expect, it } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
-import App from "../pages/[...slug]";
-import { fetchMock, routerPush } from "./setup";
+import { LoginForm } from "@/components/login-form";
+import { PostComposer } from "@/components/post-composer";
+import { SocioApp } from "@/components/socio-app";
+import { nairobiInputToIso } from "@/lib/calendar";
+import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { validatePostInput } from "@/lib/validation";
+import type { ScheduledPost } from "@/lib/types";
+import { fetchMock, uploadMock } from "./setup";
 
-const renderRoute = (route: string) => render(<App route={route} />);
+process.env.SESSION_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 
-describe("Socio release", () => {
-  it("validates both email and password before login", async () => {
+const failedPost: ScheduledPost = {
+  id: "post-1",
+  title: "Weekend PS5 deal",
+  caption: "A prepared caption",
+  brand: "chezahub",
+  format: "single",
+  imageUrl: "https://store.public.blob.vercel-storage.com/poster.jpg",
+  imagePathname: "posters/poster.jpg",
+  media: [
+    {
+      imageUrl: "https://store.public.blob.vercel-storage.com/poster.jpg",
+      imagePathname: "posters/poster.jpg",
+      position: 0,
+    },
+  ],
+  status: "failed",
+  scheduledAt: "2026-07-13T16:30:00.000Z",
+  scheduleVersion: 1,
+  workflowRunId: "wrun_1",
+  lastError: "Instagram container failed.",
+  qaStatus: "ready",
+  holdReason: null,
+  sourceWeek: null,
+  sourceRef: null,
+  approvedAt: null,
+  publishedAt: null,
+  createdAt: "2026-07-13T08:00:00.000Z",
+  updatedAt: "2026-07-13T16:31:00.000Z",
+  targets: [
+    {
+      platform: "facebook",
+      status: "published",
+      providerPostId: "fb-1",
+      lastError: null,
+      attempts: 1,
+      idempotencyKey: "post-1:facebook",
+      publishedAt: "2026-07-13T16:31:00.000Z",
+    },
+    {
+      platform: "instagram",
+      status: "failed",
+      providerPostId: null,
+      lastError: "Container failed",
+      attempts: 1,
+      idempotencyKey: "post-1:instagram",
+      publishedAt: null,
+    },
+  ],
+};
+
+const draftPost: ScheduledPost = {
+  ...failedPost,
+  id: "post-2",
+  title: "Gift card guide",
+  status: "draft",
+  scheduledAt: null,
+  workflowRunId: null,
+  lastError: null,
+  targets: [
+    {
+      platform: "facebook",
+      status: "draft",
+      providerPostId: null,
+      lastError: null,
+      attempts: 0,
+      idempotencyKey: "post-2:facebook",
+      publishedAt: null,
+    },
+    {
+      platform: "instagram",
+      status: "draft",
+      providerPostId: null,
+      lastError: null,
+      attempts: 0,
+      idempotencyKey: "post-2:instagram",
+      publishedAt: null,
+    },
+  ],
+};
+
+const publishedPost: ScheduledPost = {
+  ...failedPost,
+  status: "published",
+  lastError: null,
+  targets: failedPost.targets.map((target) => ({
+    ...target,
+    status: "published",
+    providerPostId: `${target.platform}-published`,
+    lastError: null,
+  })),
+};
+
+function renderApp(posts = [failedPost, draftPost]) {
+  fetchMock.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ posts }),
+  });
+  return render(
+    <SocioApp
+      initialPosts={posts}
+      initialConnection={{
+        connected: true,
+        expiresAt: "2026-07-20T08:00:00.000Z",
+        remainingHours: 160,
+      }}
+    />,
+  );
+}
+
+function navButton(name: string) {
+  return within(
+    screen.getByRole("navigation", { name: "Primary navigation" }),
+  ).getByRole("button", { name });
+}
+
+describe("Socio weekly scheduler", () => {
+  it("shows upstream authentication failures without storing credentials in the browser", async () => {
     const user = userEvent.setup();
-    renderRoute("login");
-    const email = screen.getByLabelText("Email address");
-    const password = screen.getByLabelText("Password");
-
-    await user.clear(email);
-    await user.type(email, "invalid");
-    await user.click(screen.getByRole("button", { name: "Connect Socio to SMMPRO" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Enter a valid email address.",
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: "SMMPRO rejected those credentials." }),
+    });
+    render(<LoginForm />);
+    await user.type(
+      screen.getByLabelText("Email address"),
+      "admin@example.com",
     );
-    expect(routerPush).not.toHaveBeenCalled();
-
-    await user.clear(email);
-    await user.type(email, "boss@socio.app");
-    await user.clear(password);
-    await user.click(screen.getByRole("button", { name: "Connect Socio to SMMPRO" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter your password");
-    expect(routerPush).not.toHaveBeenCalled();
-  });
-
-  it("connects to SMMPRO after valid login", async () => {
-    const user = userEvent.setup();
-    renderRoute("login");
-    await user.type(screen.getByLabelText("Email address"), "admin@example.com");
-    await user.type(screen.getByLabelText("Password"), "strong-password");
-    await user.click(
-      screen.getByRole("button", { name: "Connect Socio to SMMPRO" }),
+    await user.type(screen.getByLabelText("Password"), "wrong-password");
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "SMMPRO rejected those credentials.",
     );
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/dashboard"));
-    expect(localStorage.getItem("socio-session")).toBe("smmpro");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth",
-      expect.objectContaining({ method: "POST" }),
-    );
+    expect(window.localStorage).toHaveLength(0);
   });
 
-  it("loads live SMMPRO connection health", async () => {
-    renderRoute("onboarding/connections");
-    expect(await screen.findByText("ChezaHub Facebook")).toBeInTheDocument();
-    expect(screen.getByText("JengaSites Instagram")).toBeInTheDocument();
-    expect(screen.getByText(/Connected to SMMPRO/)).toBeInTheDocument();
+  it("renders the focused navigation and weekly operational states", async () => {
+    renderApp();
+    expect(navButton("Calendar")).toHaveAttribute("aria-current", "page");
+    expect(navButton("New Post")).toBeInTheDocument();
+    expect(navButton("Publishing")).toBeInTheDocument();
+    expect(navButton("Connections")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("navigation", { name: "Primary navigation" }),
+      ).getAllByRole("button"),
+    ).toHaveLength(4);
+    expect(screen.getByText("Unscheduled drafts")).toBeInTheDocument();
+    expect(screen.getByText("Weekend PS5 deal")).toBeInTheDocument();
+    expect(screen.getAllByText("Failed").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Campaign Manager")).not.toBeInTheDocument();
   });
 
-  it("adds a new content idea", async () => {
+  it("refreshes the calendar from the live posts endpoint", async () => {
     const user = userEvent.setup();
-    renderRoute("content");
-    await user.click(screen.getByRole("button", { name: "New Idea" }));
-    expect(screen.getByText("Community poll 4")).toBeInTheDocument();
-  });
+    renderApp([draftPost]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ posts: [publishedPost] }),
+    });
 
-  it("generates a caption and publishes through the SMMPRO bridge", async () => {
-    const user = userEvent.setup();
-    renderRoute("studio/post-1");
-    const file = new File(["poster"], "poster.jpg", { type: "image/jpeg" });
-    await user.upload(screen.getByLabelText(/Add artwork/), file);
-    await user.click(screen.getByRole("button", { name: "Generate Caption" }));
-    expect(await screen.findByDisplayValue("Generated caption from SMMPRO.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Publish Now" }));
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+
     await waitFor(() =>
-      expect(routerPush).toHaveBeenCalledWith("/publishing/job-1"),
+      expect(fetchMock).toHaveBeenCalledWith("/api/posts", {
+        cache: "no-store",
+      }),
     );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/publish",
-      expect.objectContaining({ method: "POST" }),
+    expect(await screen.findByText("Weekend PS5 deal")).toBeInTheDocument();
+  });
+
+  it("retries the failed post through the target-safe retry endpoint", async () => {
+    const user = userEvent.setup();
+    renderApp([failedPost]);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ posts: [failedPost] }),
+    });
+    await user.click(screen.getByRole("button", { name: "Retry failed" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/posts/post-1/retry", {
+        method: "POST",
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Successful platform targets will not be reposted",
     );
   });
 
-  it("retries only the failed publishing target", async () => {
+  it("opens an unscheduled draft for editing from Calendar", async () => {
     const user = userEvent.setup();
-    renderRoute("publishing/job-1");
-    expect(screen.getByText(/Instagram failed/)).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Retry failed target" }),
-    );
+    renderApp([draftPost]);
+    await user.click(screen.getByRole("button", { name: "Edit" }));
     expect(
-      screen.getByText("Published successfully to Facebook and Instagram."),
+      screen.getByRole("dialog", { name: "Edit post" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Published").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByDisplayValue("Gift card guide")).toBeInTheDocument();
   });
 
-  it("sends a reply from the engagement inbox", async () => {
+  it("deletes an unscheduled draft from Calendar", async () => {
     const user = userEvent.setup();
-    renderRoute("engagement");
-    const reply = screen.getByLabelText("Reply message");
-    await user.type(reply, "Yes, it is available.");
-    await user.click(screen.getByRole("button", { name: "Send Reply" }));
-    expect(screen.getByText("You: Yes, it is available.")).toBeInTheDocument();
-    expect(reply).toHaveValue("");
-  });
-
-  it("keeps automation toggles independent", async () => {
-    const user = userEvent.setup();
-    renderRoute("automations");
-    const first = screen.getByRole("button", {
-      name: "Disable Price drop opportunity",
+    renderApp([draftPost]);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
     });
-    const second = screen.getByRole("button", {
-      name: "Disable Restock notification",
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ posts: [] }),
     });
-    await user.click(first);
-    expect(first).toHaveAttribute("aria-pressed", "false");
-    expect(second).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("2")).toBeInTheDocument();
-  });
 
-  it("opens and completes the team invitation dialog", async () => {
-    const user = userEvent.setup();
-    renderRoute("team");
-    await user.click(screen.getByRole("button", { name: "Invite member" }));
-    const dialog = screen.getByRole("dialog", { name: "Invite team member" });
     await user.click(
-      within(dialog).getByRole("button", { name: "Send invite" }),
+      screen.getByRole("button", { name: "Delete Gift card guide" }),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Invitation sent");
-  });
 
-  it("exposes settings sections and saves notification preferences", async () => {
-    const user = userEvent.setup();
-    renderRoute("settings/notifications");
-    expect(
-      screen.getByRole("navigation", { name: "Settings sections" }),
-    ).toBeInTheDocument();
-    const digest = screen.getByRole("button", {
-      name: "Enable Daily performance digest",
-    });
-    await user.click(digest);
-    expect(digest).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Save preferences" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Notification preferences saved",
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/posts/post-2", {
+        method: "DELETE",
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Draft deleted.",
     );
   });
 
-  it("filters the global search results", async () => {
+  it("turns a bulk image selection into independent persistent drafts", async () => {
     const user = userEvent.setup();
-    renderRoute("dashboard");
-    const search = screen.getByLabelText("Search Socio");
-    await user.type(search, "team");
-    const teamLinks = screen.getAllByRole("link", { name: "Team" });
+    const onSaved = vi.fn();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
+      input === "/api/captions"
+        ? {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              caption: "Ready-to-publish AI caption #Gaming",
+            }),
+          }
+        : {
+            ok: true,
+            status: 201,
+            json: async () => ({ ids: ["1", "2"] }),
+          },
+    );
+    render(<PostComposer onClose={() => undefined} onSaved={onSaved} />);
+    const files = [
+      new File(["one"], "morning-deal.jpg", { type: "image/jpeg" }),
+      new File(["two"], "evening-poll.png", { type: "image/png" }),
+    ];
+    await user.upload(
+      screen.getByLabelText(/Choose finished poster images/),
+      files,
+    );
+    expect(screen.getByText("2 of 10 posters")).toBeInTheDocument();
     expect(
-      teamLinks.some((link) => link.getAttribute("href") === "/team"),
-    ).toBe(true);
+      await screen.findAllByDisplayValue("Ready-to-publish AI caption #Gaming"),
+    ).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+    const request = fetchMock.mock.calls.find(
+      (call) => call[0] === "/api/posts",
+    );
+    const body = JSON.parse((request?.[1] as RequestInit).body as string) as {
+      items: unknown[];
+    };
+    expect(body.items).toHaveLength(2);
+    expect(body.items.every((item: any) => item.scheduledAt === null)).toBe(
+      true,
+    );
+    expect(body.items.every((item: any) => item.format === "single")).toBe(
+      true,
+    );
   });
-  it("has no serious accessibility violations on login and dashboard", async () => {
-    const login = renderRoute("login");
-    let audit = await axe.run(document.body, {
-      rules: { "color-contrast": { enabled: false } },
-    });
+
+  it("combines selected slides into one AI-captioned carousel and one schedule", async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
+      input === "/api/captions"
+        ? {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              caption:
+                "Swipe through this week’s highlights. #ChezaHub #Gaming",
+            }),
+          }
+        : {
+            ok: true,
+            status: 201,
+            json: async () => ({ ids: ["carousel-1"] }),
+          },
+    );
+    render(<PostComposer onClose={() => undefined} onSaved={onSaved} />);
+    await user.click(screen.getByRole("button", { name: /Carousel/ }));
+    await user.upload(screen.getByLabelText(/Choose finished poster images/), [
+      new File(["one"], "slide-one.jpg", { type: "image/jpeg" }),
+      new File(["two"], "slide-two.jpg", { type: "image/jpeg" }),
+    ]);
+    expect(screen.getByText("2 of 10 slides")).toBeInTheDocument();
     expect(
-      audit.violations.filter((item) =>
-        ["serious", "critical"].includes(item.impact || ""),
+      await screen.findByDisplayValue(
+        "Swipe through this week’s highlights. #ChezaHub #Gaming",
       ),
-    ).toEqual([]);
-    login.unmount();
-    renderRoute("dashboard");
-    audit = await axe.run(document.body, {
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Schedule date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Schedule time (EAT)")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+
+    const request = fetchMock.mock.calls.find(
+      (call) => call[0] === "/api/posts",
+    );
+    const body = JSON.parse((request?.[1] as RequestInit).body as string) as {
+      items: Array<{ format: string; media: unknown[]; caption: string }>;
+    };
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      format: "carousel",
+      caption: "Swipe through this week’s highlights. #ChezaHub #Gaming",
+    });
+    expect(body.items[0].media).toHaveLength(2);
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("converts Nairobi calendar input to the correct UTC instant", () => {
+    expect(nairobiInputToIso("2026-07-13", "19:30")).toBe(
+      "2026-07-13T16:30:00.000Z",
+    );
+  });
+
+  it("encrypts publisher sessions with authenticated encryption", () => {
+    const encrypted = encryptSecret("upstream-cookie");
+    expect(encrypted).not.toContain("upstream-cookie");
+    expect(decryptSecret(encrypted)).toBe("upstream-cookie");
+  });
+
+  it("blocks HOLD content from entering a schedule", () => {
+    expect(() =>
+      validatePostInput({
+        title: "Unsafe offer",
+        caption: "Do not publish",
+        brand: "chezahub",
+        platforms: ["instagram"],
+        format: "single",
+        imageUrl: "https://store.public.blob.vercel-storage.com/hold.png",
+        imagePathname: "week1/hold.png",
+        media: [
+          {
+            imageUrl: "https://store.public.blob.vercel-storage.com/hold.png",
+            imagePathname: "week1/hold.png",
+          },
+        ],
+        qaStatus: "hold",
+        holdReason: "Invented price",
+        scheduledAt: "2026-07-14T05:00:00.000Z",
+      }),
+    ).toThrow("QA-blocked posts must remain drafts");
+  });
+
+  it("has no serious accessibility violations on the main workflow", async () => {
+    renderApp([draftPost]);
+    await waitFor(() =>
+      expect(screen.getByText("Gift card guide")).toBeInTheDocument(),
+    );
+    const audit = await axe.run(document.body, {
       rules: { "color-contrast": { enabled: false } },
     });
     expect(
