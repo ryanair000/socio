@@ -14,9 +14,16 @@ const expected = [
   "/api/auth/route",
   "/api/logout/route",
   "/api/uploads/route",
+  "/api/captions/route",
   "/api/posts/route",
   "/api/posts/[id]/route",
   "/api/posts/[id]/retry/route",
+  "/api/posts/[id]/publish-now/route",
+  "/api/posts/[id]/approve/route",
+  "/api/posts/[id]/cancel/route",
+  "/api/posts/[id]/duplicate/route",
+  "/api/import/week1/route",
+  "/api/cron/publish-due/route",
   "/api/connections/route",
 ];
 

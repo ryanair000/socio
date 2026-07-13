@@ -2,28 +2,34 @@
 
 Socio is a focused weekly social scheduler for ChezaHub and JengaSites:
 
-> Upload finished posters and captions → place them on the week → auto-publish through SMMPRO → inspect each platform result → retry only failed targets.
+> Upload finished posters → generate complete captions → choose independent posts or a carousel → schedule → auto-publish through SMMPRO.
 
 Production: https://socio-beryl.vercel.app
 
 ## What the app does
 
 - Uploads up to 10 PNG, JPG, or WEBP posters in one batch.
-- Creates one independent post per image so high-volume schedules remain clear.
+- Automatically generates a ready-to-edit Instagram caption from each poster with OpenAI vision.
+- Creates one independent post per image or combines 2–10 ordered slides into one carousel.
+- Gives independent posts their own date/time and gives a carousel one shared date/time, all in EAT.
 - Saves drafts and schedules in Neon Postgres, across devices and browser sessions.
 - Stores public, immutable poster URLs in Vercel Blob for the Meta Graph API.
 - Uses Vercel Workflow to sleep until the exact scheduled instant and resume durably.
-- Publishes Facebook and Instagram as separate targets through SMMPRO.
+- Publishes Facebook and Instagram single-image posts and native carousels as separate targets through SMMPRO.
 - Tracks `draft`, `scheduled`, `publishing`, `published`, and `failed` states.
+- Tracks `partially_published` when one platform succeeds and another fails.
 - Records target-level attempt counts, provider post IDs, and errors.
 - Retries failed targets without reposting targets already marked published.
 - Invalidates stale workflows when a scheduled post is rescheduled or returned to draft.
+- Recovers due jobs and stale publishing claims through a protected minute-level cron.
+- Imports each organized Week 1 day ZIP into five EAT slots while preserving READY, READY AFTER QA, and HOLD gates.
+- Supports explicit publish-now, duplicate, cancel, and QA approval actions.
 
-The old campaign, analytics, automation, product-feed, approval, and engagement demos were removed from the production navigation. The active product surface is now only Calendar, Posts, Publishing, and Connections.
+The old campaign, analytics, automation, product-feed, approval, and engagement demos were removed from the production navigation. The active product surface is now only Calendar, New Post, Publishing, and Connections.
 
 ## Security boundary
 
-SMMPRO remains the owner of Facebook and Instagram credentials. Socio never copies Meta tokens into its database or browser.
+SMMPRO remains the owner of Facebook, Instagram, and OpenAI credentials. Socio never copies those secrets into its database or browser. Caption previews are reduced in the browser, sent through Socio's authenticated route, and proxied to SMMPRO's authenticated OpenAI endpoint.
 
 When an administrator signs in:
 
@@ -55,7 +61,7 @@ npm install
 npm run db:migrate
 ```
 
-The migration is idempotent and creates posts, per-platform targets, publishing attempts, sessions, and encrypted publisher credentials.
+The migration is idempotent and creates posts, ordered post media, QA/source metadata, stable per-target idempotency keys, publishing attempts, sessions, and encrypted publisher credentials. Run it after pulling this version.
 
 ## Local development
 
@@ -71,6 +77,15 @@ npm run check
 
 The full check runs formatting, unit and interaction tests, strict TypeScript, the production Workflow/Next.js build, and focused route verification.
 
-## Current publishing scope
+## Publishing formats
 
-Each calendar item contains one image. Bulk selection creates multiple independent posts. Native multi-image carousels are intentionally not presented as functional because the current SMMPRO `/api/post` contract accepts one image per publishing request.
+- **Independent:** every selected image becomes its own draft or scheduled post, with its own generated caption and time.
+- **Carousel:** 2–10 images remain in selection order and publish as one Facebook/Instagram carousel with one generated caption and time.
+
+Socio's Workflow still waits until the selected instant. At publish time it sends the ordered public Blob URLs to SMMPRO, which creates the native Meta carousel containers and records the platform-level result.
+
+## Week 1 import and operations
+
+Open **New Post**, select one Monday–Sunday `*_Posters_and_Captions.zip` pack, and import it. Every import is saved as a draft first. READY items can be scheduled or published after review; READY AFTER QA requires an explicit QA confirmation; HOLD remains blocked.
+
+See [docs/OPERATIONS.md](docs/OPERATIONS.md) for migration, cron, overdue publishing, recovery, and upstream SMMPRO acceptance checks.

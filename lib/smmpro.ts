@@ -52,6 +52,7 @@ type PublishResult = {
   providerPostId: string | null;
   error: string | null;
   response: unknown;
+  retryable: boolean;
 };
 
 export async function publishWithSmmpro(input: {
@@ -59,14 +60,17 @@ export async function publishWithSmmpro(input: {
   brand: Brand;
   platform: Platform;
   caption: string;
-  imageUrl: string;
+  imageUrls: string[];
+  idempotencyKey: string;
 }): Promise<PublishResult> {
   const form = new FormData();
   form.set("accountId", input.brand);
   form.set("message", input.caption);
-  form.set("imageUrl", input.imageUrl);
+  form.set("imageUrl", input.imageUrls[0]);
+  input.imageUrls.forEach((imageUrl) => form.append("imageUrls", imageUrl));
   form.set("publishFacebook", String(input.platform === "facebook"));
   form.set("publishInstagram", String(input.platform === "instagram"));
+  form.set("idempotencyKey", input.idempotencyKey);
 
   try {
     const response = await fetch(`${baseUrl()}/api/post`, {
@@ -87,6 +91,7 @@ export async function publishWithSmmpro(input: {
         providerPostId: null,
         error: body.error || `SMMPRO returned HTTP ${response.status}.`,
         response: body,
+        retryable: response.status === 429 || response.status >= 500,
       };
     }
     const result = body.results?.[0];
@@ -99,6 +104,7 @@ export async function publishWithSmmpro(input: {
         : result?.status?.replace(/^Failed:\s*/i, "") ||
           "SMMPRO did not confirm publication.",
       response: body,
+      retryable: false,
     };
   } catch (error) {
     return {
@@ -106,6 +112,7 @@ export async function publishWithSmmpro(input: {
       providerPostId: null,
       error: error instanceof Error ? error.message : "Could not reach SMMPRO.",
       response: null,
+      retryable: true,
     };
   }
 }

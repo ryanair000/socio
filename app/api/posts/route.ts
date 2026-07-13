@@ -18,11 +18,16 @@ export async function GET(request: Request) {
   try {
     await requireSession();
     const url = new URL(request.url);
-    const startValue = url.searchParams.get("start");
-    const endValue = url.searchParams.get("end");
+    const startValue =
+      url.searchParams.get("from") ?? url.searchParams.get("start");
+    const endValue = url.searchParams.get("to") ?? url.searchParams.get("end");
     const startDate = startValue ? new Date(startValue) : undefined;
     const endDate = endValue ? new Date(endValue) : undefined;
-    const posts = await listPosts(startDate, endDate);
+    const status = url.searchParams.get("status");
+    const loaded = await listPosts(startDate, endDate);
+    const posts = status
+      ? loaded.filter((post) => post.status === status)
+      : loaded;
     return NextResponse.json({ posts });
   } catch (error) {
     return NextResponse.json(

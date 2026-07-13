@@ -6,12 +6,17 @@ import {
   CalendarClock,
   Check,
   ImagePlus,
+  Layers3,
   LoaderCircle,
+  Rows3,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { isoToNairobiInputs, nairobiInputToIso } from "@/lib/calendar";
-import type { Brand, Platform, ScheduledPost } from "@/lib/types";
+import type { Brand, Platform, PostFormat, ScheduledPost } from "@/lib/types";
+
+type CaptionStatus = "idle" | "generating" | "ready" | "error";
 
 type DraftItem = {
   key: string;
@@ -23,6 +28,8 @@ type DraftItem = {
   caption: string;
   date: string;
   time: string;
+  captionStatus: CaptionStatus;
+  captionError: string;
 };
 
 type Props = {
@@ -47,11 +54,51 @@ function cleanTitle(filename: string) {
     .slice(0, 120);
 }
 
+async function compressedCaptionFile(file: File, maxDimension: number) {
+  if (typeof createImageBitmap !== "function") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(bitmap.width, bitmap.height),
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.76),
+    );
+    return blob
+      ? new File([blob], `${cleanTitle(file.name) || "poster"}.jpg`, {
+          type: "image/jpeg",
+        })
+      : file;
+  } catch {
+    return file;
+  }
+}
+
 export function PostComposer({ editing, onClose, onSaved }: Props) {
   const defaults = suggestedInputs();
   const savedSchedule = isoToNairobiInputs(editing?.scheduledAt ?? null);
   const initialSchedule = savedSchedule.date ? savedSchedule : defaults;
+  const initialMedia = editing
+    ? editing.media?.length
+      ? editing.media
+      : [
+          {
+            imageUrl: editing.imageUrl,
+            imagePathname: editing.imagePathname,
+            position: 0,
+          },
+        ]
+    : [];
   const [brand, setBrand] = useState<Brand>(editing?.brand ?? "chezahub");
+  const [format, setFormat] = useState<PostFormat>(editing?.format ?? "single");
   const [platforms, setPlatforms] = useState<Platform[]>(
     editing?.targets.map((target) => target.platform) ?? [
       "facebook",
@@ -60,21 +107,30 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
   );
   const [items, setItems] = useState<DraftItem[]>(
     editing
-      ? [
-          {
-            key: editing.id,
-            file: null,
-            preview: editing.imageUrl,
-            imageUrl: editing.imageUrl,
-            imagePathname: editing.imagePathname,
-            title: editing.title,
-            caption: editing.caption,
-            date: initialSchedule.date,
-            time: initialSchedule.time,
-          },
-        ]
+      ? initialMedia.map((media, index) => ({
+          key: `${editing.id}-${index}`,
+          file: null,
+          preview: media.imageUrl,
+          imageUrl: media.imageUrl,
+          imagePathname: media.imagePathname,
+          title: index === 0 ? editing.title : `Slide ${index + 1}`,
+          caption: editing.caption,
+          date: initialSchedule.date,
+          time: initialSchedule.time,
+          captionStatus: "ready" as const,
+          captionError: "",
+        }))
       : [],
   );
+  const [carouselTitle, setCarouselTitle] = useState(editing?.title ?? "");
+  const [carouselCaption, setCarouselCaption] = useState(
+    editing?.format === "carousel" ? editing.caption : "",
+  );
+  const [carouselDate, setCarouselDate] = useState(initialSchedule.date);
+  const [carouselTime, setCarouselTime] = useState(initialSchedule.time);
+  const [carouselCaptionStatus, setCarouselCaptionStatus] =
+    useState<CaptionStatus>(editing?.caption ? "ready" : "idle");
+  const [carouselCaptionError, setCarouselCaptionError] = useState("");
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -88,10 +144,17 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     [],
   );
 
+  const isGenerating =
+    carouselCaptionStatus === "generating" ||
+    items.some((item) => item.captionStatus === "generating");
   const canSubmit =
     items.length > 0 &&
+    (format === "single" || items.length >= 2) &&
     platforms.length > 0 &&
-    items.every((item) => item.title.trim());
+    (format === "carousel"
+      ? carouselTitle.trim()
+      : items.every((item) => item.title.trim())) &&
+    !isGenerating;
   const title = editing ? "Edit post" : "Add this week’s posters";
 
   function addFiles(files: FileList | null) {
@@ -114,12 +177,25 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
         caption: "",
         date: defaults.date,
         time: defaults.time,
+        captionStatus: "idle" as const,
+        captionError: "",
       };
     });
-    setItems((current) => [...current, ...next]);
+    const combined = [...items, ...next];
+    setItems(combined);
+    if (!carouselTitle && combined[0]) setCarouselTitle(combined[0].title);
+    if (format === "carousel") {
+      if (combined.length >= 2) void generateCarouselCaption(combined);
+    } else {
+      next.forEach((item) => void generateItemCaption(item));
+    }
   }
 
-  function updateItem(key: string, field: keyof DraftItem, value: string) {
+  function updateItem(
+    key: string,
+    field: "title" | "caption" | "date" | "time",
+    value: string,
+  ) {
     setItems((current) =>
       current.map((item) =>
         item.key === key ? { ...item, [field]: value } : item,
@@ -146,13 +222,129 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     );
   }
 
+  async function requestCaption(
+    sourceItems: DraftItem[],
+    mode: PostFormat,
+    workingTitle: string,
+  ) {
+    const form = new FormData();
+    form.set("brand", brand);
+    form.set("mode", mode);
+    form.set("title", workingTitle);
+    for (const item of sourceItems) {
+      if (item.file) {
+        form.append(
+          "images",
+          await compressedCaptionFile(
+            item.file,
+            mode === "carousel" ? 800 : 1200,
+          ),
+        );
+      } else if (item.imageUrl) {
+        form.append("imageUrls", item.imageUrl);
+      }
+    }
+    const response = await fetch("/api/captions", {
+      method: "POST",
+      body: form,
+    });
+    const body = (await response.json()) as {
+      caption?: string;
+      error?: string;
+    };
+    if (!response.ok || !body.caption) {
+      throw new Error(body.error || "Could not generate a caption.");
+    }
+    return body.caption;
+  }
+
+  async function generateItemCaption(item: DraftItem) {
+    setItems((current) =>
+      current.map((value) =>
+        value.key === item.key
+          ? { ...value, captionStatus: "generating", captionError: "" }
+          : value,
+      ),
+    );
+    try {
+      const caption = await requestCaption([item], "single", item.title);
+      setItems((current) =>
+        current.map((value) =>
+          value.key === item.key
+            ? {
+                ...value,
+                caption,
+                captionStatus: "ready",
+                captionError: "",
+              }
+            : value,
+        ),
+      );
+    } catch (captionError) {
+      setItems((current) =>
+        current.map((value) =>
+          value.key === item.key
+            ? {
+                ...value,
+                captionStatus: "error",
+                captionError:
+                  captionError instanceof Error
+                    ? captionError.message
+                    : "Could not generate a caption.",
+              }
+            : value,
+        ),
+      );
+    }
+  }
+
+  async function generateCarouselCaption(sourceItems = items) {
+    if (sourceItems.length < 2) return;
+    setCarouselCaptionStatus("generating");
+    setCarouselCaptionError("");
+    try {
+      setCarouselCaption(
+        await requestCaption(
+          sourceItems,
+          "carousel",
+          carouselTitle || sourceItems[0].title,
+        ),
+      );
+      setCarouselCaptionStatus("ready");
+    } catch (captionError) {
+      setCarouselCaptionStatus("error");
+      setCarouselCaptionError(
+        captionError instanceof Error
+          ? captionError.message
+          : "Could not generate a caption.",
+      );
+    }
+  }
+
+  function changeFormat(nextFormat: PostFormat) {
+    setFormat(nextFormat);
+    setError("");
+    if (nextFormat === "carousel") {
+      if (!carouselTitle && items[0]) setCarouselTitle(items[0].title);
+      if (items.length >= 2 && !carouselCaption) {
+        void generateCarouselCaption(items);
+      }
+    } else {
+      items
+        .filter((item) => !item.caption)
+        .forEach((item) => void generateItemCaption(item));
+    }
+  }
+
   async function save(intent: "draft" | "schedule") {
     if (!canSubmit) return;
     if (
       intent === "schedule" &&
-      items.some((item) => !item.date || !item.time)
+      (format === "carousel"
+        ? !carouselDate || !carouselTime
+        : items.some((item) => !item.date || !item.time))
     ) {
-      setError("Every scheduled post needs a date and time.");
+      setError("Choose both a schedule date and time.");
       return;
     }
 
@@ -161,6 +353,10 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     setProgress(0);
     try {
       const prepared = [];
+      const uploadedMedia: Array<{
+        imageUrl: string;
+        imagePathname: string;
+      }> = [];
       for (let index = 0; index < items.length; index += 1) {
         const item = items[index];
         let imageUrl = item.imageUrl;
@@ -185,16 +381,43 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
           imageUrl = blob.url;
           imagePathname = blob.pathname;
         }
+        uploadedMedia.push({ imageUrl, imagePathname });
+        if (format === "single") {
+          prepared.push({
+            title: item.title,
+            caption: item.caption,
+            brand,
+            format: "single",
+            platforms,
+            imageUrl,
+            imagePathname,
+            media: [{ imageUrl, imagePathname }],
+            qaStatus: editing?.qaStatus,
+            holdReason: editing?.holdReason,
+            sourceWeek: editing?.sourceWeek,
+            scheduledAt:
+              intent === "schedule"
+                ? nairobiInputToIso(item.date, item.time)
+                : null,
+          });
+        }
+      }
+      if (format === "carousel") {
         prepared.push({
-          title: item.title,
-          caption: item.caption,
+          title: carouselTitle,
+          caption: carouselCaption,
           brand,
+          format: "carousel",
           platforms,
-          imageUrl,
-          imagePathname,
+          imageUrl: uploadedMedia[0].imageUrl,
+          imagePathname: uploadedMedia[0].imagePathname,
+          media: uploadedMedia,
+          qaStatus: editing?.qaStatus,
+          holdReason: editing?.holdReason,
+          sourceWeek: editing?.sourceWeek,
           scheduledAt:
             intent === "schedule"
-              ? nairobiInputToIso(item.date, item.time)
+              ? nairobiInputToIso(carouselDate, carouselTime)
               : null,
         });
       }
@@ -222,8 +445,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
   }
 
   const countLabel = useMemo(
-    () => `${items.length} of 10 poster${items.length === 1 ? "" : "s"}`,
-    [items.length],
+    () =>
+      `${items.length} of 10 ${format === "carousel" ? "slide" : "poster"}${items.length === 1 ? "" : "s"}`,
+    [format, items.length],
   );
 
   return (
@@ -247,7 +471,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
             <p>
               {editing
                 ? "Update the details or move this post to a new time."
-                : "Each image becomes its own independent post."}
+                : format === "carousel"
+                  ? "Combine the selected slides into one scheduled carousel."
+                  : "Each image becomes its own independently scheduled post."}
             </p>
           </div>
           <button
@@ -260,6 +486,25 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
         </header>
 
         <div className="composer-settings">
+          <fieldset className="format-setting">
+            <legend>Post format</legend>
+            <div className="format-options">
+              <button
+                type="button"
+                className={format === "single" ? "format active" : "format"}
+                onClick={() => changeFormat("single")}
+              >
+                <Rows3 size={16} /> Independent
+              </button>
+              <button
+                type="button"
+                className={format === "carousel" ? "format active" : "format"}
+                onClick={() => changeFormat("carousel")}
+              >
+                <Layers3 size={16} /> Carousel
+              </button>
+            </div>
+          </fieldset>
           <label>
             Brand
             <select
@@ -314,71 +559,213 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
         </div>
         <div className="composer-list">
           {items.length ? (
-            items.map((item, index) => (
-              <article className="composer-item" key={item.key}>
-                <img src={item.preview} alt="" />
-                <div className="composer-fields">
-                  <div className="item-heading">
-                    <span>Post {index + 1}</span>
-                    {!editing ? (
-                      <button
-                        className="text-danger"
-                        onClick={() => removeItem(item.key)}
-                      >
-                        <Trash2 size={15} /> Remove
-                      </button>
-                    ) : null}
+            <>
+              {format === "carousel" ? (
+                <article className="carousel-details">
+                  <div className="carousel-details-heading">
+                    <div>
+                      <strong>One carousel post</strong>
+                      <span>
+                        One caption and one schedule for all {items.length}{" "}
+                        slide
+                        {items.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="ai-button"
+                      onClick={() => generateCarouselCaption()}
+                      disabled={carouselCaptionStatus === "generating"}
+                    >
+                      {carouselCaptionStatus === "generating" ? (
+                        <LoaderCircle className="spin" size={15} />
+                      ) : (
+                        <Sparkles size={15} />
+                      )}
+                      {carouselCaption ? "Regenerate" : "Generate caption"}
+                    </button>
                   </div>
                   <label>
                     Title
                     <input
-                      value={item.title}
+                      value={carouselTitle}
                       maxLength={120}
-                      onChange={(event) =>
-                        updateItem(item.key, "title", event.target.value)
-                      }
+                      onChange={(event) => setCarouselTitle(event.target.value)}
                     />
                   </label>
                   <label>
-                    Caption
+                    Instagram caption
                     <textarea
-                      value={item.caption}
+                      value={carouselCaption}
                       maxLength={2200}
-                      rows={4}
-                      placeholder="Paste the finished caption…"
-                      onChange={(event) =>
-                        updateItem(item.key, "caption", event.target.value)
-                      }
+                      rows={6}
+                      placeholder="ChatGPT will write a complete caption from all slides…"
+                      onChange={(event) => {
+                        setCarouselCaption(event.target.value);
+                        setCarouselCaptionStatus("ready");
+                      }}
                     />
                   </label>
+                  {carouselCaptionStatus === "generating" ? (
+                    <p className="caption-note">
+                      <Sparkles size={13} /> Reading all slides and writing the
+                      caption…
+                    </p>
+                  ) : null}
+                  {carouselCaptionError ? (
+                    <p className="caption-error" role="alert">
+                      {carouselCaptionError}
+                    </p>
+                  ) : null}
                   <div className="date-time-row">
                     <label>
-                      Date
+                      Schedule date
                       <input
                         type="date"
-                        value={item.date}
+                        value={carouselDate}
                         onChange={(event) =>
-                          updateItem(item.key, "date", event.target.value)
+                          setCarouselDate(event.target.value)
                         }
                       />
                     </label>
                     <label>
-                      Time
+                      Schedule time (EAT)
                       <input
                         type="time"
-                        value={item.time}
+                        value={carouselTime}
                         onChange={(event) =>
-                          updateItem(item.key, "time", event.target.value)
+                          setCarouselTime(event.target.value)
                         }
                       />
                     </label>
                   </div>
-                </div>
-              </article>
-            ))
+                </article>
+              ) : null}
+
+              {items.map((item, index) => (
+                <article
+                  className={`composer-item ${format === "carousel" ? "carousel-slide" : ""}`}
+                  key={item.key}
+                >
+                  <div className="slide-preview">
+                    <img
+                      src={item.preview}
+                      alt={
+                        format === "carousel"
+                          ? `Carousel slide ${index + 1}`
+                          : `Post ${index + 1} preview`
+                      }
+                    />
+                    {format === "carousel" ? <span>{index + 1}</span> : null}
+                  </div>
+                  <div className="composer-fields">
+                    <div className="item-heading">
+                      <span>
+                        {format === "carousel" ? "Slide" : "Post"} {index + 1}
+                      </span>
+                      {!editing ? (
+                        <button
+                          className="text-danger"
+                          onClick={() => removeItem(item.key)}
+                        >
+                          <Trash2 size={15} /> Remove
+                        </button>
+                      ) : null}
+                    </div>
+                    {format === "single" ? (
+                      <>
+                        <label>
+                          Title
+                          <input
+                            value={item.title}
+                            maxLength={120}
+                            onChange={(event) =>
+                              updateItem(item.key, "title", event.target.value)
+                            }
+                          />
+                        </label>
+                        <div className="caption-field">
+                          <div className="caption-field-heading">
+                            <label htmlFor={`caption-${item.key}`}>
+                              Instagram caption
+                            </label>
+                            <button
+                              type="button"
+                              className="ai-button compact"
+                              onClick={() => generateItemCaption(item)}
+                              disabled={item.captionStatus === "generating"}
+                            >
+                              {item.captionStatus === "generating" ? (
+                                <LoaderCircle className="spin" size={14} />
+                              ) : (
+                                <Sparkles size={14} />
+                              )}
+                              {item.caption ? "Regenerate" : "Generate"}
+                            </button>
+                          </div>
+                          <textarea
+                            id={`caption-${item.key}`}
+                            value={item.caption}
+                            maxLength={2200}
+                            rows={5}
+                            placeholder="ChatGPT is preparing a complete caption…"
+                            onChange={(event) =>
+                              updateItem(
+                                item.key,
+                                "caption",
+                                event.target.value,
+                              )
+                            }
+                          />
+                          {item.captionStatus === "generating" ? (
+                            <p className="caption-note">
+                              <Sparkles size={13} /> Reading poster and writing…
+                            </p>
+                          ) : null}
+                          {item.captionError ? (
+                            <p className="caption-error" role="alert">
+                              {item.captionError}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="date-time-row">
+                          <label>
+                            Schedule date
+                            <input
+                              type="date"
+                              value={item.date}
+                              onChange={(event) =>
+                                updateItem(item.key, "date", event.target.value)
+                              }
+                            />
+                          </label>
+                          <label>
+                            Schedule time (EAT)
+                            <input
+                              type="time"
+                              value={item.time}
+                              onChange={(event) =>
+                                updateItem(item.key, "time", event.target.value)
+                              }
+                            />
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="slide-help">
+                        Published in this position. Select files in the order
+                        you want people to swipe.
+                      </p>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </>
           ) : (
             <div className="empty-composer">
-              Choose one or more posters to begin.
+              Choose{" "}
+              {format === "carousel" ? "2–10 slides" : "one or more posters"} to
+              begin.
             </div>
           )}
         </div>
@@ -410,7 +797,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
             <CalendarClock size={17} />{" "}
             {editing?.status === "scheduled"
               ? "Update schedule"
-              : "Schedule posts"}
+              : format === "carousel"
+                ? "Schedule carousel"
+                : "Schedule posts"}
           </button>
         </footer>
       </section>
