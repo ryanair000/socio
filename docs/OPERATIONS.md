@@ -35,7 +35,7 @@ The Monday Fortnite group and every other HOLD item must not be published unchan
 - The post claim is an atomic `scheduled -> publishing` update and requires `qa_status = ready`.
 - Each target has a stable `<post-id>:<platform>` idempotency key.
 - Network, 429, and provider 5xx failures retry with bounded backoff.
-- The minute cron starts due workflows and resets publishing claims older than ten minutes.
+- A protected GitHub Actions job runs every five minutes to start overdue workflows and reset publishing claims older than ten minutes; a daily Vercel cron is the fallback.
 - A mixed target result becomes `partially_published`; retry selects only failed targets.
 
 ## SMMPRO acceptance check

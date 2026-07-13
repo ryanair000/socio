@@ -21,7 +21,7 @@ Production: https://socio-beryl.vercel.app
 - Records target-level attempt counts, provider post IDs, and errors.
 - Retries failed targets without reposting targets already marked published.
 - Invalidates stale workflows when a scheduled post is rescheduled or returned to draft.
-- Recovers due jobs and stale publishing claims through a protected minute-level cron.
+- Recovers due jobs and stale publishing claims through a protected five-minute GitHub Actions job with a daily Vercel fallback.
 - Imports each organized Week 1 day ZIP into five EAT slots while preserving READY, READY AFTER QA, and HOLD gates.
 - Supports explicit publish-now, duplicate, cancel, and QA approval actions.
 
