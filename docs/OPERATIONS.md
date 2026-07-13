@@ -35,7 +35,9 @@ The Monday Fortnite group and every other HOLD item must not be published unchan
 - The post claim is an atomic `scheduled -> publishing` update and requires `qa_status = ready`.
 - Each target has a stable `<post-id>:<platform>` idempotency key.
 - Network, 429, and provider 5xx failures retry with bounded backoff.
-- A protected GitHub Actions job runs every five minutes to start overdue workflows and reset publishing claims older than ten minutes; a daily Vercel cron is the fallback.
+- AWS EventBridge rule `socio-publish-due-every-5-minutes` in `eu-west-1` calls the protected endpoint every five minutes to start overdue workflows and reset publishing claims older than ten minutes; a daily Vercel cron is the fallback.
+- The rule targets API destination `socio-publish-due` through connection `socio-cron-connection` and IAM role `SocioEventBridgeApiDestinationRole` with three retries.
+- When rotating `CRON_SECRET`, deploy the new Vercel value before updating the EventBridge connection so the connection remains authorized.
 - A mixed target result becomes `partially_published`; retry selects only failed targets.
 
 ## SMMPRO acceptance check
