@@ -6,3 +6,8 @@ out
 .DS_Store
 
 *.tsbuildinfo
+.env*.local
+.workflow-data
+app/.well-known/workflow
+.playwright-cli
+/.swc

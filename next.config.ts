@@ -1,9 +1,16 @@
 import type { NextConfig } from "next";
+import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: true,
-  images: { unoptimized: true },
-  turbopack: {},
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
+    ],
+  },
+  serverExternalPackages: ["@neondatabase/serverless"],
 };
 
-export default nextConfig;
+export default withWorkflow(nextConfig);

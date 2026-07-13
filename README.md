@@ -1,78 +1,76 @@
 # Socio
 
-Socio is a responsive social-media operations platform for planning, creating, approving, publishing and measuring content across managed brands.
+Socio is a focused weekly social scheduler for ChezaHub and JengaSites:
 
-## Live release
+> Upload finished posters and captions → place them on the week → auto-publish through SMMPRO → inspect each platform result → retry only failed targets.
 
-- Production: https://socio-beryl.vercel.app
-- Figma: https://www.figma.com/design/EGJFVPismQhDS33thnk7I1
+Production: https://socio-beryl.vercel.app
 
-## SMMPRO integration
+## What the app does
 
-Socio uses the existing SMMPRO deployment as a protected publishing backend. Meta, OpenAI and Telegram credentials remain in the `fb-poster` Vercel project and are never copied into the browser or committed to this repository.
+- Uploads up to 10 PNG, JPG, or WEBP posters in one batch.
+- Creates one independent post per image so high-volume schedules remain clear.
+- Saves drafts and schedules in Neon Postgres, across devices and browser sessions.
+- Stores public, immutable poster URLs in Vercel Blob for the Meta Graph API.
+- Uses Vercel Workflow to sleep until the exact scheduled instant and resume durably.
+- Publishes Facebook and Instagram as separate targets through SMMPRO.
+- Tracks `draft`, `scheduled`, `publishing`, `published`, and `failed` states.
+- Records target-level attempt counts, provider post IDs, and errors.
+- Retries failed targets without reposting targets already marked published.
+- Invalidates stale workflows when a scheduled post is rescheduled or returned to draft.
 
-Configure only the backend URL in Socio:
+The old campaign, analytics, automation, product-feed, approval, and engagement demos were removed from the production navigation. The active product surface is now only Calendar, Posts, Publishing, and Connections.
 
-```env
-SMMPRO_BASE_URL=https://smmpro.lokimax.top
+## Security boundary
+
+SMMPRO remains the owner of Facebook and Instagram credentials. Socio never copies Meta tokens into its database or browser.
+
+When an administrator signs in:
+
+1. SMMPRO validates the existing administrator email and password.
+2. Socio stores its own random session token as a SHA-256 hash.
+3. The short-lived SMMPRO session is encrypted with AES-256-GCM for background publishing.
+4. Workflow steps decrypt it only on the server when a post is due.
+
+SMMPRO sessions last seven days. Socio blocks schedules beyond the active publisher session. Signing in again refreshes the publisher session without changing any Meta credential.
+
+## Production infrastructure
+
+- Next.js 16 App Router
+- Neon Postgres
+- Vercel Blob (public media store)
+- Vercel Workflow
+- Existing SMMPRO deployment at `https://smmpro.lokimax.top`
+
+The required Socio variables are documented in `.env.example` and are provisioned in Vercel. Never commit their values.
+
+## Database setup
+
+After linking the Vercel project and pulling Development variables:
+
+```bash
+vercel link --yes --project socio
+vercel env pull .env.local --yes
+npm install
+npm run db:migrate
 ```
 
-After signing in with the administrator account configured in SMMPRO, Socio can:
-
-- Read live connection health for ChezaHub and JengaSites
-- Generate image-aware captions through the existing OpenAI key
-- Publish to Facebook Pages and Instagram through the existing Meta tokens
-- Preserve the existing Telegram webhook workflow in SMMPRO
-
-## Included
-
-- Command Centre and weekly planner
-- Campaign and content-board workflows
-- Product-aware Creative Studio
-- Real caption generation and publishing through SMMPRO
-- Seven-day AI content planning
-- Approvals and safe publishing retries
-- Assets, product feed and engagement inbox
-- Analytics and social-sales attribution
-- Automations, team roles and settings
-- Responsive desktop, tablet and mobile layouts
-- Accessible navigation, dialogs, form guardrails and status feedback
+The migration is idempotent and creates posts, per-platform targets, publishing attempts, sessions, and encrypted publisher credentials.
 
 ## Local development
 
 ```bash
-npm install
-cp .env.example .env.local
 npm run dev
 ```
 
 ## Quality checks
 
 ```bash
-npm run test
-npm run typecheck
-npm run build
-npm run test:routes
-npm run format:check
-```
-
-Run the complete review suite with:
-
-```bash
 npm run check
 ```
 
-The public repository contains no Meta, OpenAI, Telegram or administrator secret values.
+The full check runs formatting, unit and interaction tests, strict TypeScript, the production Workflow/Next.js build, and focused route verification.
 
-## Socio AI
+## Current publishing scope
 
-Socio can generate a complete seven-day ChezaHub content plan with headlines, captions, Story copy, CTAs, hashtags and platform recommendations using the OpenAI Responses API.
-
-Add these environment variables to the Socio Vercel project:
-
-```env
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4o-mini
-```
-
-`OPENAI_MODEL` is optional. The API key is used only inside the server route and is never sent to the browser.
+Each calendar item contains one image. Bulk selection creates multiple independent posts. Native multi-image carousels are intentionally not presented as functional because the current SMMPRO `/api/post` contract accepts one image per publishing request.
