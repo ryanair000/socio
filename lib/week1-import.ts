@@ -91,16 +91,19 @@ export function parseWeek1Zip(buffer: Buffer): Week1ImportPost[] {
   const date = WEEK_DATES[day.toLowerCase()];
   const markdown = markdownEntry.getData().toString("utf8");
 
-  const imageEntries = new Map(
-    entries
-      .filter((entry) => /\.(png|jpe?g|webp)$/i.test(entry.entryName))
-      .map((entry) => [
-        entry.entryName.split(/[\\/]/).pop()!.toLowerCase(),
-        entry,
-      ]),
+  const posterEntries = entries.filter((entry) =>
+    /\.(png|jpe?g|webp)$/i.test(entry.entryName),
   );
-  if (imageEntries.size !== 10)
-    throw new Error(`Expected 10 final posters; found ${imageEntries.size}.`);
+  const imageEntries = new Map<string, (typeof posterEntries)[number]>();
+  for (const entry of posterEntries) {
+    const filename = entry.entryName.split(/[\\/]/).pop()!.toLowerCase();
+    imageEntries.set(filename, entry);
+    imageEntries.set(filename.replace(/^\d{2}_/, ""), entry);
+  }
+  if (posterEntries.length !== 10)
+    throw new Error(
+      `Expected 10 final posters; found ${posterEntries.length}.`,
+    );
 
   const posts: Week1ImportPost[] = [];
   const sectionPattern =

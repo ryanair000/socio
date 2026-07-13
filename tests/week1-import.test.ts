@@ -3,7 +3,7 @@ import AdmZip from "adm-zip";
 import { describe, expect, it } from "vitest";
 import { parseWeek1Zip } from "@/lib/week1-import";
 
-function mondayPack() {
+function mondayPack(scheduleOmitsNumericPrefixes = false) {
   const zip = new AdmZip();
   const names = Array.from(
     { length: 10 },
@@ -21,7 +21,9 @@ function mondayPack() {
     ["7:30 PM", "Evening", names.slice(7, 10), "READY"],
   ]
     .map(([time, title, media, status]) => {
-      const filenames = media as string[];
+      const filenames = (media as string[]).map((name) =>
+        scheduleOmitsNumericPrefixes ? name.replace(/^\d{2}_/, "") : name,
+      );
       return `### ${time} — ${title}
 **${filenames.length > 1 ? "Slides" : "Slide"}:** ${filenames
         .map((name) => `\`${name}\``)
@@ -69,5 +71,14 @@ describe("Week 1 ZIP import", () => {
       holdReason: "fictional artwork",
     });
     expect(posts[4].scheduledAt.toISOString()).toBe("2026-07-13T16:30:00.000Z");
+  });
+
+  it("matches schedule filenames when the ZIP posters have numeric prefixes", () => {
+    const posts = parseWeek1Zip(mondayPack(true));
+    expect(posts).toHaveLength(5);
+    expect(posts[0].media.map((media) => media.filename)).toEqual([
+      "poster_1.png",
+      "poster_2.png",
+    ]);
   });
 });
