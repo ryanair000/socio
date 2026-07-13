@@ -979,6 +979,18 @@ p {
   font-size: 10px;
   font-weight: 700;
 }
+.inline-action:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.inline-action.post-now-action {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.inline-action.post-now-action:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
 .status {
   display: inline-flex;
   align-items: center;
@@ -1587,6 +1599,15 @@ p {
   padding: 15px 25px;
   border-top: 1px solid var(--line);
   background: #fff;
+}
+.button.post-now {
+  color: #fff;
+  border-color: #16243a;
+  background: #16243a;
+  box-shadow: 0 7px 18px rgba(22, 36, 58, 0.16);
+}
+.button.post-now:hover:not(:disabled) {
+  background: #0b1729;
 }
 .composer-error {
   margin: 0 25px 10px;

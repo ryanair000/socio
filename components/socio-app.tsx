@@ -90,6 +90,7 @@ function PostCard({
   onPublishNow,
   onDuplicate,
   onCancel,
+  busy,
 }: {
   post: ScheduledPost;
   onEdit: (post: ScheduledPost) => void;
@@ -97,6 +98,7 @@ function PostCard({
   onPublishNow: (post: ScheduledPost) => void;
   onDuplicate: (post: ScheduledPost) => void;
   onCancel: (post: ScheduledPost) => void;
+  busy: boolean;
 }) {
   const overdue =
     Boolean(post.scheduledAt) &&
@@ -136,9 +138,18 @@ function PostCard({
             <RotateCcw size={13} /> Retry failed
           </button>
         ) : null}
-        {overdue && post.qaStatus === "ready" ? (
-          <button className="inline-action" onClick={() => onPublishNow(post)}>
-            <Send size={13} /> Publish overdue now
+        {["draft", "scheduled"].includes(post.status) ? (
+          <button
+            className="inline-action post-now-action"
+            onClick={() => onPublishNow(post)}
+            disabled={busy || post.qaStatus !== "ready"}
+            title={
+              post.qaStatus === "ready"
+                ? "Publish this post immediately"
+                : "Complete QA before publishing"
+            }
+          >
+            <Send size={13} /> Post now
           </button>
         ) : null}
         {["draft", "scheduled"].includes(post.status) ? (
@@ -367,7 +378,7 @@ export function SocioApp({
     const targets = post.targets.map((target) => target.platform).join(" and ");
     if (
       !window.confirm(
-        `Publish overdue post “${post.title}” now to ${targets}? Only unpublished targets will run.`,
+        `Publish post “${post.title}” now to ${targets}? Only unpublished targets will run.`,
       )
     )
       return;
@@ -855,6 +866,7 @@ export function SocioApp({
                               onPublishNow={publishNow}
                               onDuplicate={duplicate}
                               onCancel={cancel}
+                              busy={busyId === post.id}
                               key={post.id}
                             />
                           ))
@@ -1232,9 +1244,15 @@ export function SocioApp({
         <PostComposer
           editing={editing}
           onClose={() => setComposerOpen(false)}
-          onSaved={async () => {
+          onSaved={async (result) => {
             setComposerOpen(false);
-            setMessage(editing ? "Post updated." : "Posters saved.");
+            setMessage(
+              result === "published"
+                ? "Publishing queued for the confirmed targets."
+                : editing
+                  ? "Post updated."
+                  : "Posters saved.",
+            );
             await refresh(true);
           }}
         />

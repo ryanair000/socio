@@ -9,6 +9,7 @@ import {
   Layers3,
   LoaderCircle,
   Rows3,
+  Send,
   Sparkles,
   Trash2,
   X,
@@ -35,7 +36,7 @@ type DraftItem = {
 type Props = {
   editing?: ScheduledPost | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (result?: "saved" | "published") => void | Promise<void>;
 };
 
 function suggestedInputs() {
@@ -132,6 +133,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     useState<CaptionStatus>(editing?.caption ? "ready" : "idle");
   const [carouselCaptionError, setCarouselCaptionError] = useState("");
   const [pending, setPending] = useState(false);
+  const [pendingIntent, setPendingIntent] = useState<
+    "draft" | "schedule" | "publish" | null
+  >(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const previewUrls = useRef(new Set<string>());
@@ -155,6 +159,10 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
       ? carouselTitle.trim()
       : items.every((item) => item.title.trim())) &&
     !isGenerating;
+  const canPublishNow = editing
+    ? ["draft", "scheduled"].includes(editing.status) &&
+      editing.qaStatus === "ready"
+    : false;
   const title = editing ? "Edit post" : "Add this week’s posters";
 
   function addFiles(files: FileList | null) {
@@ -336,8 +344,18 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     }
   }
 
-  async function save(intent: "draft" | "schedule") {
+  async function save(intent: "draft" | "schedule" | "publish") {
     if (!canSubmit) return;
+    if (intent === "publish") {
+      if (!editing || !canPublishNow) return;
+      const targets = platforms.join(" and ");
+      if (
+        !window.confirm(
+          `Post “${format === "carousel" ? carouselTitle : items[0]?.title}” now to ${targets}? Current edits will be saved first.`,
+        )
+      )
+        return;
+    }
     if (
       intent === "schedule" &&
       (format === "carousel"
@@ -349,6 +367,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     }
 
     setPending(true);
+    setPendingIntent(intent);
     setError("");
     setProgress(0);
     try {
@@ -432,7 +451,18 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
       );
       const body = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(body.error || "Could not save posts.");
-      onSaved();
+      if (intent === "publish" && editing) {
+        const publishResponse = await fetch(
+          `/api/posts/${editing.id}/publish-now`,
+          { method: "POST" },
+        );
+        const publishBody = (await publishResponse.json()) as {
+          error?: string;
+        };
+        if (!publishResponse.ok)
+          throw new Error(publishBody.error || "Could not publish this post.");
+      }
+      await onSaved(intent === "publish" ? "published" : "saved");
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -441,6 +471,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
       );
     } finally {
       setPending(false);
+      setPendingIntent(null);
     }
   }
 
@@ -786,15 +817,40 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
             onClick={() => save("draft")}
             disabled={!canSubmit || pending}
           >
-            {pending ? <LoaderCircle className="spin" size={17} /> : null} Save
-            draft
+            {pendingIntent === "draft" ? (
+              <LoaderCircle className="spin" size={17} />
+            ) : null}{" "}
+            Save draft
           </button>
+          {editing && ["draft", "scheduled"].includes(editing.status) ? (
+            <button
+              className="button post-now"
+              onClick={() => save("publish")}
+              disabled={!canSubmit || !canPublishNow || pending}
+              title={
+                editing.qaStatus === "ready"
+                  ? "Save current edits and publish immediately"
+                  : "Complete QA before publishing"
+              }
+            >
+              {pendingIntent === "publish" ? (
+                <LoaderCircle className="spin" size={17} />
+              ) : (
+                <Send size={17} />
+              )}
+              Post now
+            </button>
+          ) : null}
           <button
             className="button primary"
             onClick={() => save("schedule")}
             disabled={!canSubmit || pending}
           >
-            <CalendarClock size={17} />{" "}
+            {pendingIntent === "schedule" ? (
+              <LoaderCircle className="spin" size={17} />
+            ) : (
+              <CalendarClock size={17} />
+            )}{" "}
             {editing?.status === "scheduled"
               ? "Update schedule"
               : format === "carousel"

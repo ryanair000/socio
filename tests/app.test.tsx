@@ -100,6 +100,18 @@ const draftPost: ScheduledPost = {
   ],
 };
 
+const scheduledDraftPost: ScheduledPost = {
+  ...draftPost,
+  id: "post-3",
+  status: "scheduled",
+  scheduledAt: "2026-07-14T05:00:00.000Z",
+  targets: draftPost.targets.map((target) => ({
+    ...target,
+    status: "scheduled",
+    idempotencyKey: `post-3:${target.platform}`,
+  })),
+};
+
 const publishedPost: ScheduledPost = {
   ...failedPost,
   status: "published",
@@ -219,6 +231,45 @@ describe("Socio weekly scheduler", () => {
     );
   });
 
+  it("offers Post now directly on a QA-ready calendar card", async () => {
+    const user = userEvent.setup();
+    renderApp([scheduledDraftPost]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ posts: [scheduledDraftPost] }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Post now" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/posts/post-3/publish-now", {
+        method: "POST",
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Publishing queued",
+    );
+  });
+
+  it("shows Post now but disables it until card QA is complete", () => {
+    renderApp([
+      {
+        ...scheduledDraftPost,
+        qaStatus: "hold",
+        holdReason: "Needs correction",
+      },
+    ]);
+    expect(screen.getByRole("button", { name: "Post now" })).toBeDisabled();
+  });
+
   it("opens an unscheduled draft for editing from Calendar", async () => {
     const user = userEvent.setup();
     renderApp([draftPost]);
@@ -227,6 +278,52 @@ describe("Socio weekly scheduler", () => {
       screen.getByRole("dialog", { name: "Edit post" }),
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue("Gift card guide")).toBeInTheDocument();
+  });
+
+  it("saves current editor changes before posting now", async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    render(
+      <PostComposer
+        editing={scheduledDraftPost}
+        onClose={() => undefined}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.clear(screen.getByDisplayValue("Gift card guide"));
+    await user.type(
+      screen.getByRole("textbox", { name: "Title" }),
+      "Updated gift card guide",
+    );
+    await user.click(screen.getByRole("button", { name: "Post now" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/posts/post-3/publish-now", {
+        method: "POST",
+      }),
+    );
+    const updateRequest = fetchMock.mock.calls.find(
+      (call) => call[0] === "/api/posts/post-3" && call[1]?.method === "PATCH",
+    );
+    const body = JSON.parse(
+      (updateRequest?.[1] as RequestInit).body as string,
+    ) as { title: string; scheduledAt: string | null };
+    expect(body).toMatchObject({
+      title: "Updated gift card guide",
+      scheduledAt: null,
+    });
+    expect(onSaved).toHaveBeenCalledWith("published");
   });
 
   it("deletes an unscheduled draft from Calendar", async () => {
