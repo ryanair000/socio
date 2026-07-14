@@ -186,6 +186,20 @@ describe("Socio weekly scheduler", () => {
     expect(screen.queryByText("Campaign Manager")).not.toBeInTheDocument();
   });
 
+  it("collapses and expands the desktop sidebar", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getByRole("main")).toHaveClass("sidebar-collapsed");
+    expect(
+      screen.getByRole("button", { name: "Expand sidebar" }),
+    ).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
+    expect(screen.getByRole("main")).not.toHaveClass("sidebar-collapsed");
+  });
+
   it("refreshes the calendar from the live posts endpoint", async () => {
     const user = userEvent.setup();
     renderApp([draftPost]);
@@ -268,6 +282,19 @@ describe("Socio weekly scheduler", () => {
       },
     ]);
     expect(screen.getByRole("button", { name: "Post now" })).toBeDisabled();
+  });
+
+  it("keeps destructive card actions behind a More disclosure", async () => {
+    const user = userEvent.setup();
+    renderApp([scheduledDraftPost]);
+
+    const disclosure = screen.getByText("More").closest("summary");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure!.closest("details")).not.toHaveAttribute("open");
+    await user.click(disclosure!);
+    expect(disclosure!.closest("details")).toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Duplicate" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Cancel post" })).toBeVisible();
   });
 
   it("opens an unscheduled draft for editing from Calendar", async () => {

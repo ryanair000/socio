@@ -16,6 +16,10 @@ import {
   LayoutDashboard,
   LayoutList,
   LogOut,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -104,20 +108,27 @@ function PostCard({
     Boolean(post.scheduledAt) &&
     new Date(String(post.scheduledAt)).getTime() < Date.now() &&
     ["draft", "scheduled"].includes(post.status);
+  const editable = ["draft", "scheduled"].includes(post.status);
   return (
     <article
       className={`calendar-card card-${post.status}${overdue ? " overdue" : ""}`}
     >
-      <Image
-        src={post.imageUrl}
-        alt=""
-        width={400}
-        height={500}
-        sizes="(max-width: 760px) 175px, 200px"
-      />
+      <div className="card-media">
+        <Image
+          src={post.imageUrl}
+          alt={`${post.title} poster`}
+          width={400}
+          height={500}
+          sizes="(max-width: 760px) 175px, 200px"
+        />
+        {post.media.length > 1 ? (
+          <span className="slide-count">{post.media.length} slides</span>
+        ) : null}
+      </div>
       <div className="calendar-card-body">
         <div className="card-time">
           <Clock3 size={13} /> {formatTime(post.scheduledAt)}
+          {overdue ? <span className="overdue-flag">Overdue</span> : null}
         </div>
         <strong>{post.title}</strong>
         <div className="card-meta">
@@ -138,7 +149,7 @@ function PostCard({
             <RotateCcw size={13} /> Retry failed
           </button>
         ) : null}
-        {["draft", "scheduled"].includes(post.status) ? (
+        {editable ? (
           <button
             className="inline-action post-now-action"
             onClick={() => onPublishNow(post)}
@@ -152,25 +163,33 @@ function PostCard({
             <Send size={13} /> Post now
           </button>
         ) : null}
-        {["draft", "scheduled"].includes(post.status) ? (
-          <div className="card-quick-actions">
-            <button className="inline-action" onClick={() => onDuplicate(post)}>
-              <Plus size={13} /> Duplicate
-            </button>
+        {editable ? (
+          <div className="card-secondary-actions">
             <button
-              className="inline-action danger-text"
-              onClick={() => onCancel(post)}
+              className="card-secondary-action"
+              onClick={() => onEdit(post)}
+              disabled={busy}
             >
-              <X size={13} /> Cancel
+              <Pencil size={12} /> Edit
             </button>
+            <details className="card-more-actions">
+              <summary aria-label={`More actions for ${post.title}`}>
+                <MoreHorizontal size={14} /> More
+              </summary>
+              <div>
+                <button onClick={() => onDuplicate(post)} disabled={busy}>
+                  <Plus size={12} /> Duplicate
+                </button>
+                <button
+                  className="danger-text"
+                  onClick={() => onCancel(post)}
+                  disabled={busy}
+                >
+                  <X size={12} /> Cancel post
+                </button>
+              </div>
+            </details>
           </div>
-        ) : null}
-        {["draft", "scheduled"].includes(post.status) ? (
-          <button
-            className="card-overlay"
-            aria-label={`Edit ${post.title}`}
-            onClick={() => onEdit(post)}
-          />
         ) : null}
       </div>
     </article>
@@ -187,6 +206,7 @@ export function SocioApp({
   const [posts, setPosts] = useState(initialPosts);
   const [connection, setConnection] = useState(initialConnection);
   const [tab, setTab] = useState<Tab>("calendar");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [weekStart, setWeekStart] = useState(() => startOfWeek());
   const [composerOpen, setComposerOpen] = useState(false);
   const [editing, setEditing] = useState<ScheduledPost | null>(null);
@@ -479,13 +499,29 @@ export function SocioApp({
   const rangeLabel = `${formatDay(weekStart)} – ${formatDay(addDays(weekStart, 6))}`;
 
   return (
-    <main className="app-shell">
+    <main
+      className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}
+    >
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-mark">S</div>
           <strong>Socio</strong>
         </div>
-        <nav aria-label="Primary navigation">
+        <button
+          className="sidebar-toggle"
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="primary-navigation"
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen size={16} />
+          ) : (
+            <PanelLeftClose size={16} />
+          )}
+        </button>
+        <nav id="primary-navigation" aria-label="Primary navigation">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -493,6 +529,7 @@ export function SocioApp({
               onClick={() => setTab(id)}
               aria-label={label}
               aria-current={tab === id ? "page" : undefined}
+              title={sidebarCollapsed ? label : undefined}
             >
               <Icon size={19} />
               <span>{label}</span>
