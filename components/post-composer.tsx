@@ -160,8 +160,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
       : items.every((item) => item.title.trim())) &&
     !isGenerating;
   const canPublishNow = editing
-    ? ["draft", "scheduled"].includes(editing.status) &&
-      editing.qaStatus === "ready"
+    ? ["draft", "scheduled"].includes(editing.status)
     : false;
   const title = editing ? "Edit post" : "Add this week’s posters";
 
@@ -827,11 +826,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
               className="button post-now"
               onClick={() => save("publish")}
               disabled={!canSubmit || !canPublishNow || pending}
-              title={
-                editing.qaStatus === "ready"
-                  ? "Save current edits and publish immediately"
-                  : "Complete QA before publishing"
-              }
+              title="Save current edits and publish immediately"
             >
               {pendingIntent === "publish" ? (
                 <LoaderCircle className="spin" size={17} />

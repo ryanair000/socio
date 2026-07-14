@@ -153,12 +153,8 @@ function PostCard({
           <button
             className="inline-action post-now-action"
             onClick={() => onPublishNow(post)}
-            disabled={busy || post.qaStatus !== "ready"}
-            title={
-              post.qaStatus === "ready"
-                ? "Publish this post immediately"
-                : "Complete QA before publishing"
-            }
+            disabled={busy}
+            title="Publish this post immediately"
           >
             <Send size={13} /> Post now
           </button>

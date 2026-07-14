@@ -27,7 +27,7 @@ async function claimPost(postId: string, version: number) {
   const sql = getSql();
   const rows =
     await sql`UPDATE posts SET status = 'publishing', claimed_at = now(), updated_at = now(), last_error = NULL
-    WHERE id = ${postId} AND schedule_version = ${version} AND status = 'scheduled' AND qa_status = 'ready'
+    WHERE id = ${postId} AND schedule_version = ${version} AND status = 'scheduled'
     RETURNING id, brand, caption, image_url, publisher_credential_id`;
   if (!rows[0]) {
     console.log(`[claimPost] DONE postId=${postId} claimed=false`);

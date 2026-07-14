@@ -273,7 +273,7 @@ describe("Socio weekly scheduler", () => {
     );
   });
 
-  it("shows Post now but disables it until card QA is complete", () => {
+  it("allows a QA-flagged card to be posted immediately", () => {
     renderApp([
       {
         ...scheduledDraftPost,
@@ -281,7 +281,7 @@ describe("Socio weekly scheduler", () => {
         holdReason: "Needs correction",
       },
     ]);
-    expect(screen.getByRole("button", { name: "Post now" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Post now" })).toBeEnabled();
   });
 
   it("keeps destructive card actions behind a More disclosure", async () => {
@@ -493,8 +493,8 @@ describe("Socio weekly scheduler", () => {
     expect(decryptSecret(encrypted)).toBe("upstream-cookie");
   });
 
-  it("blocks HOLD content from entering a schedule", () => {
-    expect(() =>
+  it("allows QA-flagged content to enter a schedule", () => {
+    expect(
       validatePostInput({
         title: "Unsafe offer",
         caption: "Do not publish",
@@ -513,7 +513,10 @@ describe("Socio weekly scheduler", () => {
         holdReason: "Invented price",
         scheduledAt: "2026-07-14T05:00:00.000Z",
       }),
-    ).toThrow("QA-blocked posts must remain drafts");
+    ).toMatchObject({
+      qaStatus: "hold",
+      scheduledAt: new Date("2026-07-14T05:00:00.000Z"),
+    });
   });
 
   it("has no serious accessibility violations on the main workflow", async () => {

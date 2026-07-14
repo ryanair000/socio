@@ -122,9 +122,6 @@ export function validatePostInput(input: unknown) {
     throw new Error("A carousel needs at least two slides.");
   if (format === "single" && media.length !== 1)
     throw new Error("An independent post must contain one image.");
-  if (scheduledAt && qaStatus && qaStatus !== "ready")
-    throw new Error("QA-blocked posts must remain drafts until approved.");
-
   return {
     title,
     caption,

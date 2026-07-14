@@ -131,8 +131,6 @@ export async function createPost(
   const id = randomUUID();
   const status = input.scheduledAt ? "scheduled" : "draft";
   const qaStatus = input.qaStatus ?? "ready";
-  if (input.scheduledAt && qaStatus !== "ready")
-    throw new Error("QA-blocked posts must remain drafts until approved.");
   const version = input.scheduledAt ? 1 : 0;
   const sql = getSql();
   const queries = [
@@ -179,10 +177,9 @@ export async function prepareRetry(
       status = 'scheduled', scheduled_at = now(), schedule_version = schedule_version + 1,
       publisher_credential_id = ${publisherCredentialId}, workflow_run_id = NULL,
       last_error = NULL, updated_at = now()
-    WHERE id = ${postId} AND status IN ('failed', 'partially_published') AND qa_status = 'ready'
+    WHERE id = ${postId} AND status IN ('failed', 'partially_published')
     RETURNING schedule_version`;
-  if (!rows[0])
-    throw new Error("Only failed targets on a QA-ready post can be retried.");
+  if (!rows[0]) throw new Error("Only failed posts can be retried.");
   await sql`UPDATE post_targets SET status = 'scheduled', last_error = NULL
     WHERE post_id = ${postId} AND status = 'failed'`;
   return Number(rows[0].schedule_version);
@@ -204,8 +201,6 @@ export async function updatePost(
 
   const status = input.scheduledAt ? "scheduled" : "draft";
   const qaStatus = input.qaStatus ?? current[0].qa_status;
-  if (input.scheduledAt && qaStatus !== "ready")
-    throw new Error("Complete and approve QA before scheduling this post.");
   const version = Number(current[0].schedule_version) + 1;
   await sql.transaction([
     sql`UPDATE posts SET title = ${input.title}, caption = ${input.caption}, brand = ${input.brand},
@@ -283,9 +278,8 @@ export async function preparePublishNow(
       schedule_version = schedule_version + 1, publisher_credential_id = ${publisherCredentialId},
       workflow_run_id = NULL, last_error = NULL, claimed_at = NULL, updated_at = now()
     WHERE id = ${postId} AND status IN ('draft', 'scheduled', 'failed', 'partially_published')
-      AND qa_status = 'ready'
     RETURNING schedule_version`;
-  if (!rows[0]) throw new Error("This post is not QA-ready for publishing.");
+  if (!rows[0]) throw new Error("This post cannot be published now.");
   await sql`UPDATE post_targets SET status = 'scheduled', last_error = NULL
     WHERE post_id = ${postId} AND status <> 'published'`;
   return Number(rows[0].schedule_version);
@@ -303,7 +297,7 @@ export async function listRecoverablePosts() {
       WHERE status = 'publishing' AND claimed_at < now() - interval '10 minutes'`,
   ]);
   const rows = await sql`SELECT id, schedule_version FROM posts
-    WHERE status = 'scheduled' AND qa_status = 'ready' AND scheduled_at <= now()
+    WHERE status = 'scheduled' AND scheduled_at <= now()
     ORDER BY scheduled_at LIMIT 50`;
   return rows.map((row) => ({
     postId: String(row.id),
