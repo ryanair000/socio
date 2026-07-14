@@ -392,6 +392,7 @@ p {
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 5;
   height: 100vh;
   padding: 22px 14px;
   display: flex;
