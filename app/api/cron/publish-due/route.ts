@@ -28,19 +28,23 @@ export async function GET(request: Request) {
 
   const due = await listRecoverablePosts();
   const queued: string[] = [];
+  const failed: Array<{ postId: string; error: string }> = [];
   for (const item of due) {
     try {
       const run = await start(publishScheduledPost, [item]);
       await saveWorkflowRun(item.postId, item.version, run.runId);
       queued.push(item.postId);
     } catch (error) {
-      await markQueueFailure(
-        item.postId,
+      const message =
         error instanceof Error
           ? error.message
-          : "Cron could not start publishing.",
-      );
+          : "Cron could not start publishing.";
+      await markQueueFailure(item.postId, message);
+      failed.push({ postId: item.postId, error: message });
     }
   }
-  return NextResponse.json({ ok: true, queued });
+  return NextResponse.json(
+    { ok: failed.length === 0, queued, failed },
+    { status: failed.length ? 500 : 200 },
+  );
 }

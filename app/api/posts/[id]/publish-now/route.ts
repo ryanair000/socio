@@ -28,12 +28,12 @@ export async function POST(_: Request, context: Context) {
       const run = await start(publishScheduledPost, [{ postId: id, version }]);
       await saveWorkflowRun(id, version, run.runId);
     } catch (error) {
-      await markQueueFailure(
-        id,
+      const message =
         error instanceof Error
           ? error.message
-          : "Could not start the publishing workflow.",
-      );
+          : "Could not start the publishing workflow.";
+      await markQueueFailure(id, message);
+      return NextResponse.json({ error: message }, { status: 502 });
     }
     return NextResponse.json({ ok: true });
   } catch (error) {

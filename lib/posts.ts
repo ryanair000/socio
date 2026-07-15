@@ -295,6 +295,24 @@ export async function listRecoverablePosts() {
     sql`UPDATE posts SET status = 'scheduled', schedule_version = schedule_version + 1,
         claimed_at = NULL, workflow_run_id = NULL, updated_at = now()
       WHERE status = 'publishing' AND claimed_at < now() - interval '10 minutes'`,
+    sql`UPDATE posts SET status = 'scheduled', schedule_version = schedule_version + 1,
+        publisher_credential_id = (
+          SELECT id FROM publisher_credentials
+          WHERE expires_at > now()
+          ORDER BY expires_at DESC
+          LIMIT 1
+        ),
+        workflow_run_id = NULL, last_error = NULL, claimed_at = NULL, updated_at = now()
+      WHERE status = 'draft' AND scheduled_at <= now() AND qa_status <> 'hold'
+        AND EXISTS (
+          SELECT 1 FROM publisher_credentials
+          WHERE expires_at > now()
+        )`,
+    sql`UPDATE post_targets SET status = 'scheduled', last_error = NULL
+      WHERE post_id IN (
+        SELECT id FROM posts
+        WHERE status = 'scheduled' AND scheduled_at <= now() AND qa_status <> 'hold'
+      ) AND status = 'draft'`,
   ]);
   const rows = await sql`SELECT id, schedule_version FROM posts
     WHERE status = 'scheduled' AND scheduled_at <= now()
