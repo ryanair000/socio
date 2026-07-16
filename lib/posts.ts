@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
-import type { Platform, ScheduledPost } from "@/lib/types";
+import { ensureTikTokSchema } from "@/lib/schema";
+import type { Platform, PublishPlatform, ScheduledPost } from "@/lib/types";
 import { validatePostInput } from "@/lib/validation";
 import type { Week1ImportPost } from "@/lib/week1-import";
 
@@ -16,6 +17,9 @@ function mapPosts(postRows: DbRow[], targetRows: DbRow[], mediaRows: DbRow[]) {
       status: row.status as ScheduledPost["targets"][number]["status"],
       providerPostId: row.provider_post_id
         ? String(row.provider_post_id)
+        : null,
+      providerPublishId: row.provider_publish_id
+        ? String(row.provider_publish_id)
         : null,
       lastError: row.last_error ? String(row.last_error) : null,
       attempts: Number(row.attempts ?? 0),
@@ -83,6 +87,7 @@ function mapPosts(postRows: DbRow[], targetRows: DbRow[], mediaRows: DbRow[]) {
 }
 
 export async function listPosts(start?: Date, end?: Date) {
+  await ensureTikTokSchema();
   const sql = getSql();
   const postRows =
     start && end
@@ -109,6 +114,7 @@ export async function listPosts(start?: Date, end?: Date) {
 }
 
 export async function getPost(postId: string) {
+  await ensureTikTokSchema();
   const sql = getSql();
   const postRows = await sql`SELECT * FROM posts WHERE id = ${postId}`;
   if (!postRows.length) return null;
@@ -127,6 +133,7 @@ export async function createPost(
   rawInput: unknown,
   publisherCredentialId: string | null,
 ) {
+  await ensureTikTokSchema();
   const input = validatePostInput(rawInput);
   const id = randomUUID();
   const status = input.scheduledAt ? "scheduled" : "draft";
@@ -168,11 +175,20 @@ export async function saveWorkflowRun(
     WHERE id = ${postId} AND schedule_version = ${version}`;
 }
 
+async function rotateTerminalTikTokKey(postId: string) {
+  const sql = getSql();
+  await sql`UPDATE post_targets SET idempotency_key = ${`${postId}:tiktok:${randomUUID()}`}
+    WHERE post_id = ${postId} AND platform = 'tiktok' AND status = 'failed'
+      AND provider_publish_id IS NULL`;
+}
+
 export async function prepareRetry(
   postId: string,
   publisherCredentialId: string,
 ) {
+  await ensureTikTokSchema();
   const sql = getSql();
+  await rotateTerminalTikTokKey(postId);
   const rows = await sql`UPDATE posts SET
       status = 'scheduled', scheduled_at = now(), schedule_version = schedule_version + 1,
       publisher_credential_id = ${publisherCredentialId}, workflow_run_id = NULL,
@@ -190,6 +206,7 @@ export async function updatePost(
   rawInput: unknown,
   publisherCredentialId: string | null,
 ) {
+  await ensureTikTokSchema();
   const input = validatePostInput(rawInput);
   const sql = getSql();
   const current =
@@ -230,6 +247,7 @@ export async function updatePost(
 }
 
 export async function markQueueFailure(postId: string, message: string) {
+  await ensureTikTokSchema();
   const sql = getSql();
   const published = await sql`SELECT 1 FROM post_targets
     WHERE post_id = ${postId} AND status = 'published' LIMIT 1`;
@@ -272,7 +290,9 @@ export async function preparePublishNow(
   postId: string,
   publisherCredentialId: string,
 ) {
+  await ensureTikTokSchema();
   const sql = getSql();
+  await rotateTerminalTikTokKey(postId);
   const rows =
     await sql`UPDATE posts SET status = 'scheduled', scheduled_at = now(),
       schedule_version = schedule_version + 1, publisher_credential_id = ${publisherCredentialId},
@@ -286,15 +306,16 @@ export async function preparePublishNow(
 }
 
 export async function listRecoverablePosts() {
+  await ensureTikTokSchema();
   const sql = getSql();
   await sql.transaction([
     sql`UPDATE post_targets SET status = 'scheduled', last_error = 'Recovered after a stale publishing lock.'
       WHERE post_id IN (
-        SELECT id FROM posts WHERE status = 'publishing' AND claimed_at < now() - interval '10 minutes'
+        SELECT id FROM posts WHERE status = 'publishing' AND claimed_at < now() - interval '20 minutes'
       ) AND status = 'publishing'`,
     sql`UPDATE posts SET status = 'scheduled', schedule_version = schedule_version + 1,
         claimed_at = NULL, workflow_run_id = NULL, updated_at = now()
-      WHERE status = 'publishing' AND claimed_at < now() - interval '10 minutes'`,
+      WHERE status = 'publishing' AND claimed_at < now() - interval '20 minutes'`,
     sql`UPDATE posts SET status = 'scheduled', schedule_version = schedule_version + 1,
         publisher_credential_id = (
           SELECT id FROM publisher_credentials
@@ -339,6 +360,7 @@ export async function createImportedPosts(
     }
   >,
 ) {
+  await ensureTikTokSchema();
   const sql = getSql();
   const queries = [];
   const ids: string[] = [];
@@ -382,6 +404,7 @@ export async function cancelPost(postId: string) {
 }
 
 export async function duplicatePost(postId: string) {
+  await ensureTikTokSchema();
   const sql = getSql();
   const rows = await sql`SELECT * FROM posts WHERE id = ${postId}`;
   if (!rows[0]) throw new Error("Post was not found.");
@@ -409,7 +432,7 @@ export async function duplicatePost(postId: string) {
           VALUES (${id}, ${position}, ${String(item.image_url)}, ${String(item.image_pathname)})`,
     ),
     ...targets.map((target) => {
-      const platform = target.platform as Platform;
+      const platform = target.platform as PublishPlatform;
       return sql`INSERT INTO post_targets (post_id, platform, status, idempotency_key)
         VALUES (${id}, ${platform}, 'draft', ${`${id}:${platform}`})`;
     }),
