@@ -4,8 +4,8 @@ import {
   POST_FORMATS,
   QA_STATUSES,
   type Brand,
-  type Platform,
   type PostFormat,
+  type PublishPlatform,
   type QaStatus,
 } from "@/lib/types";
 
@@ -13,8 +13,11 @@ export function isBrand(value: unknown): value is Brand {
   return typeof value === "string" && BRANDS.includes(value as Brand);
 }
 
-export function isPlatform(value: unknown): value is Platform {
-  return typeof value === "string" && PLATFORMS.includes(value as Platform);
+export function isPlatform(value: unknown): value is PublishPlatform {
+  return (
+    typeof value === "string" &&
+    PLATFORMS.includes(value as PublishPlatform)
+  );
 }
 
 export function isPostFormat(value: unknown): value is PostFormat {
@@ -27,7 +30,7 @@ export function isQaStatus(value: unknown): value is QaStatus {
   return typeof value === "string" && QA_STATUSES.includes(value as QaStatus);
 }
 
-export function normalizePlatforms(value: unknown): Platform[] {
+export function normalizePlatforms(value: unknown): PublishPlatform[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter(isPlatform))];
 }
@@ -118,6 +121,9 @@ export function validatePostInput(input: unknown) {
     throw new Error("Caption cannot exceed 2,200 characters.");
   if (!isBrand(brand)) throw new Error("Choose a valid brand.");
   if (!platforms.length) throw new Error("Choose at least one platform.");
+  if (platforms.includes("tiktok") && brand !== "chezahub") {
+    throw new Error("TikTok publishing is currently available for ChezaHub only.");
+  }
   if (format === "carousel" && media.length < 2)
     throw new Error("A carousel needs at least two slides.");
   if (format === "single" && media.length !== 1)
