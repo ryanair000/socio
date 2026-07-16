@@ -23,6 +23,15 @@ type ClaimedPost = {
   credentialId: string | null;
 };
 
+type PublishTargetOutcome = {
+  platform: PublishPlatform;
+  skipped: boolean;
+  success: boolean;
+  processing?: boolean;
+  publishId?: string;
+  error?: string | null;
+};
+
 async function loadSchedule(postId: string, version: number) {
   "use step";
   await ensureTikTokSchema();
@@ -94,7 +103,7 @@ async function publishTarget(input: {
   caption: string;
   imageUrls: string[];
   encryptedToken: string;
-}) {
+}): Promise<PublishTargetOutcome> {
   "use step";
   await ensureTikTokSchema();
   const meta = getStepMetadata();
