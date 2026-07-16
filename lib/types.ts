@@ -21,8 +21,8 @@ export const TARGET_STATUSES = [
 ] as const;
 
 export type Brand = (typeof BRANDS)[number];
-export type Platform = (typeof PLATFORMS)[number];
-export type PublishPlatform = Platform;
+export type Platform = "facebook" | "instagram";
+export type PublishPlatform = (typeof PLATFORMS)[number];
 export type PostFormat = (typeof POST_FORMATS)[number];
 export type PostStatus = (typeof POST_STATUSES)[number];
 export type TargetStatus = (typeof TARGET_STATUSES)[number];
