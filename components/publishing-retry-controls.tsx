@@ -83,7 +83,9 @@ export function PublishingRetryControls() {
       window.setTimeout(syncWithPublishingPage, 350);
     } catch (error) {
       setFeedback(
-        error instanceof Error ? error.message : "Could not retry failed posts.",
+        error instanceof Error
+          ? error.message
+          : "Could not retry failed posts.",
       );
     } finally {
       setPending(false);
