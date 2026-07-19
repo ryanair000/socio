@@ -17,3 +17,4 @@ jobs:
           name: socio-source
           path: socio-source.zip
           retention-days: 1
+# one-time export trigger
