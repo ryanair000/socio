@@ -20,7 +20,9 @@ function tikTokTargetStyles(posts: ScheduledPost[]) {
       post.targets.some((target) => String(target.platform) === "tiktok"),
     )
     .map((post) => {
-      const encodedImageUrl = escapeCssAttribute(encodeURIComponent(post.imageUrl));
+      const encodedImageUrl = escapeCssAttribute(
+        encodeURIComponent(post.imageUrl),
+      );
       const selector = `.calendar-card:has(.card-media img[src*="${encodedImageUrl}"]) .platform-icons`;
       return `${selector} > svg:last-child { display: none; }
 ${selector}::after { content: "♪"; display: inline-grid; place-items: center; width: 13px; height: 13px; font-size: 12px; font-weight: 900; line-height: 1; }`;
