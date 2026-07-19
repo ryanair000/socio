@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActivePublisherCredential, getSession } from "@/lib/auth";
 import { listPosts } from "@/lib/posts";
+import { PublishingRetryControls } from "@/components/publishing-retry-controls";
 import { SocioApp } from "@/components/socio-app";
 import type { ScheduledPost } from "@/lib/types";
 
@@ -53,6 +54,7 @@ export default async function HomePage() {
             : null,
         }}
       />
+      <PublishingRetryControls />
     </>
   );
 }
