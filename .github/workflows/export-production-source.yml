@@ -1,0 +1,19 @@
+name: Export production source
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/export-production-source.yml'
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: zip -r socio-source.zip . -x '.git/*' 'socio-source.zip'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: socio-source
+          path: socio-source.zip
+          retention-days: 1
