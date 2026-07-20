@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+// Temporary, protected recovery route. Delete after the verified preview is promoted.
 const TOKEN_HASH = "a8b91f713a36013c62e3f625ee7d455094f5ad5890998955254d01cdf93538f9";
 const PROJECT_ID = "prj_Pn0fsgnopxanHeOMrywFm2q3nSy4";
 const TEAM_ID = "team_XqjheFqtugMBMnTdZubPD1T8";
