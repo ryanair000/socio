@@ -13,7 +13,7 @@ function authorized(value: string | null) {
   return received.length === expected.length && timingSafeEqual(received, expected);
 }
 
-export async function POST(request: Request) {
+async function promote(request: Request) {
   const url = new URL(request.url);
   if (!authorized(url.searchParams.get("key"))) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -55,3 +55,6 @@ export async function POST(request: Request) {
     { status: response.ok ? 200 : response.status },
   );
 }
+
+export const GET = promote;
+export const POST = promote;
