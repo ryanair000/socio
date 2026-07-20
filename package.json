@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs && node --env-file=.env.local scripts/migrate-imports.mjs",
     "test": "vitest run",
     "check": "npm run format:check && npm run test && npm run typecheck && npm run build && npm run test:routes",
     "test:routes": "node tests/routes.mjs",
