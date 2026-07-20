@@ -6,17 +6,21 @@
 - Manifest 1.0 and legacy Week 1 ZIP parsing.
 - Image signature, archive, size, duplicate, phone-number, QA-hold, and declared-price checks.
 - Explicit review, approval, draft-only commit, schedule, and cancel APIs.
-- Web interface, skill endpoints, MCP endpoint, OpenAPI schema, Codex skill, migration, and tests.
+- Version checks and per-target publishing idempotency.
+- Web importer at `/imports`.
+- API-key skill endpoints, remote MCP endpoint, and OpenAPI action schema.
+- Codex skill, pack builder, schema, example manifest, migrations, and parser/policy tests.
 
-## Production checks
+## Production verification
 
-- [ ] Preview build and tests pass.
-- [ ] Merge to `main`.
-- [ ] Production deployment Ready on `socio.jengasites.com`.
-- [ ] `/imports` requires Socio login.
-- [ ] OpenAPI schema returns 200.
-- [ ] MCP rejects missing authorization.
-- [ ] Upload creates staging only; draft commit starts no workflow.
-- [ ] Schedule requires confirmation and a current publisher session.
+- [ ] Preview build succeeds.
+- [ ] Pull request merges to `main`.
+- [ ] Production deployment is Ready at `socio.jengasites.com`.
+- [ ] `/imports` redirects an unauthenticated visitor to login.
+- [ ] `/socio-publisher.openapi.json` returns 200.
+- [ ] `/api/mcp` rejects missing authorization.
+- [ ] Pack upload creates staging records only.
+- [ ] Draft creation starts no workflow.
+- [ ] Scheduling requires exact confirmation and a current publisher session.
 
-Set `SOCIO_SKILL_API_KEY` in Vercel to activate remote MCP/OpenAPI/Codex tools. The web importer uses the normal Socio login.
+The remote API uses `SOCIO_SKILL_API_KEY` when configured. Otherwise Socio derives an isolated key from the existing `CRON_SECRET`; an authenticated administrator can read the connection details through `/api/skill-key`.
