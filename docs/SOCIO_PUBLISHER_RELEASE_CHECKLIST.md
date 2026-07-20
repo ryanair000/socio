@@ -13,12 +13,12 @@
 
 ## Production verification
 
-- [ ] Preview build succeeds.
-- [ ] Pull request merges to `main`.
+- [x] Preview build succeeds.
+- [x] Pull request merges to `main`.
 - [ ] Production deployment is Ready at `socio.jengasites.com`.
 - [ ] `/imports` redirects an unauthenticated visitor to login.
 - [ ] `/socio-publisher.openapi.json` returns 200.
-- [ ] `/api/mcp` rejects missing authorization.
+- [ ] `/api/mcp` rejects missing authorization for tool calls.
 - [ ] Pack upload creates staging records only.
 - [ ] Draft creation starts no workflow.
 - [ ] Scheduling requires exact confirmation and a current publisher session.
