@@ -25,4 +25,6 @@
 
 Production was retriggered from the clean `main` branch after Vercel's temporary build-rate limit cleared.
 
+A documentation-only production retrigger was issued on 20 July 2026; no social content was created or modified.
+
 The remote API uses `SOCIO_SKILL_API_KEY` when configured. Otherwise Socio derives an isolated key from the existing `CRON_SECRET`; an authenticated administrator can read the connection details through `/api/skill-key`.
