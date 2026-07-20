@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { isoToNairobiInputs, nairobiInputToIso } from "@/lib/calendar";
 import type { ImportDetail, ImportSummary } from "@/lib/imports";
 import type { OverduePolicy } from "@/lib/content-pack";
+
+function eatInputValue(value: string | null) {
+  const parts = isoToNairobiInputs(value);
+  return parts.date && parts.time ? `${parts.date}T${parts.time}` : "";
+}
+
+function eatInputToIso(value: string) {
+  if (!value) return null;
+  const [date, time] = value.split("T");
+  return date && time ? nairobiInputToIso(date, time) : null;
+}
 
 export function ImportManager() {
   const [imports, setImports] = useState<ImportSummary[]>([]);
@@ -49,7 +61,7 @@ export function ImportManager() {
   async function action(name: "approve" | "commit" | "schedule" | "cancel") {
     if (!selected) return;
     const prompts = {
-      approve: "Approve every eligible entry? Blocked entries will remain blocked.",
+      approve: "Approve every eligible entry? READY AFTER QA entries stay blocked until you mark their correction complete.",
       commit: "Create Socio drafts only? This will not schedule or publish anything.",
       schedule: `Schedule approved drafts using the ${policy.replaceAll("_", " ")} policy?`,
       cancel: "Cancel this import and every future draft or schedule created from it?",
@@ -69,7 +81,7 @@ export function ImportManager() {
         body: JSON.stringify({
           expectedVersion: selected.version,
           confirmation: confirmations[name],
-          confirmQa: name === "approve",
+          confirmQa: false,
           policy,
           staggerMinutes: 120,
         }),
@@ -112,7 +124,7 @@ export function ImportManager() {
           entryId: entry.id,
           title: data.get("title"),
           caption: data.get("caption"),
-          scheduledAt: local ? new Date(local).toISOString() : null,
+          scheduledAt: eatInputToIso(local),
           platforms,
           qaStatus: data.get("qaStatus"),
           holdReason: data.get("holdReason"),
@@ -167,7 +179,7 @@ export function ImportManager() {
                 <form onSubmit={(event) => void saveEntry(event, entry)} style={{ display: "grid", gap: 9 }}>
                   <label>Title<input name="title" defaultValue={entry.title} maxLength={120} /></label>
                   <label>Instagram caption<textarea name="caption" defaultValue={entry.caption} maxLength={2200} rows={5} /></label>
-                  <label>Intended EAT schedule<input name="scheduledAt" type="datetime-local" defaultValue={entry.scheduledAt ? entry.scheduledAt.slice(0,16) : ""} /></label>
+                  <label>Intended EAT schedule<input name="scheduledAt" type="datetime-local" defaultValue={eatInputValue(entry.scheduledAt)} /></label>
                   <div style={{ display: "flex", gap: 12 }}>{["facebook","instagram","tiktok"].map((platform) => <label key={platform}><input name={platform} type="checkbox" defaultChecked={entry.platforms.includes(platform as never)} /> {platform}</label>)}</div>
                   <label>QA status<select name="qaStatus" defaultValue={entry.qaStatus}><option value="ready">Ready</option><option value="ready_after_qa">Ready after QA</option><option value="hold">Hold</option></select></label>
                   <label>QA note<input name="holdReason" defaultValue={entry.holdReason ?? ""} maxLength={500} /></label>
