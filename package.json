@@ -7,7 +7,7 @@
     "build": "npm run test && npm run typecheck && next build",
     "start": "next start",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs && node --env-file=.env.local scripts/migrate-imports.mjs",
-    "test": "vitest run",
+    "test": "node scripts/run-tests.mjs",
     "check": "npm run format:check && npm run build && npm run test:routes",
     "test:routes": "node tests/routes.mjs",
     "typecheck": "tsc --noEmit",
