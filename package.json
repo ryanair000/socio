@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run test && npm run typecheck && next build",
+    "postbuild": "node scripts/promote-vercel-preview.mjs",
     "start": "next start",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs && node --env-file=.env.local scripts/migrate-imports.mjs",
     "test": "node scripts/run-tests.mjs",
