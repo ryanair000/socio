@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getActivePublisherCredential, getSession } from "@/lib/auth";
 import { listPosts } from "@/lib/posts";
@@ -56,6 +57,13 @@ export default async function HomePage() {
             : null,
         }}
       />
+      <Link
+        href="/imports"
+        className="button secondary"
+        style={{ position: "fixed", right: 22, bottom: 22, zIndex: 30 }}
+      >
+        Import pack
+      </Link>
       <PublishingRetryControls />
     </>
   );
