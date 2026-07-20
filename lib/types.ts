@@ -32,7 +32,7 @@ export type PostTarget = {
   platform: Platform;
   status: TargetStatus;
   providerPostId: string | null;
-  providerPublishId: string | null;
+  providerPublishId?: string | null;
   lastError: string | null;
   attempts: number;
   idempotencyKey: string;

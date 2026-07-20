@@ -1,0 +1,77 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Socio Publisher",
+    "version": "1.0.0",
+    "description": "Approval-first poster-pack import, draft creation, scheduling, and cancellation for Socio. Uploading never publishes."
+  },
+  "servers": [{ "url": "https://socio.jengasites.com" }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer" }
+    },
+    "schemas": {
+      "ActionRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "confirmation"],
+        "properties": {
+          "expectedVersion": { "type": "integer" },
+          "entryIds": { "type": "array", "items": { "type": "string" } },
+          "confirmQa": { "type": "boolean" },
+          "confirmation": { "type": "string" },
+          "policy": { "type": "string", "enum": ["keep_draft", "roll_forward", "skip_expired", "stagger_from_now"] },
+          "staggerMinutes": { "type": "integer", "minimum": 15 }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/api/skill/imports": {
+      "get": {
+        "operationId": "listSocioImports",
+        "summary": "List staged content-pack imports",
+        "responses": { "200": { "description": "Import summaries" } }
+      },
+      "post": {
+        "operationId": "stageSocioImportFromUrl",
+        "summary": "Stage a ZIP from a public Vercel Blob URL",
+        "description": "Creates a review batch only. It never creates posts or schedules.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["packUrl"],
+                "properties": { "packUrl": { "type": "string", "format": "uri" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Staged import" }, "200": { "description": "Existing identical import" } }
+      }
+    },
+    "/api/skill/imports/{id}": {
+      "get": {
+        "operationId": "getSocioImport",
+        "summary": "Inspect one import and its checks",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Detailed import" } }
+      }
+    },
+    "/api/skill/imports/{id}/{action}": {
+      "post": {
+        "operationId": "mutateSocioImport",
+        "summary": "Approve, create drafts, schedule, or cancel an import",
+        "description": "Each action needs the current batch version and its exact confirmation phrase.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "action", "in": "path", "required": true, "schema": { "type": "string", "enum": ["approve", "commit", "schedule", "cancel"] } }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ActionRequest" } } } },
+        "responses": { "200": { "description": "Updated import and action result" }, "409": { "description": "Stale version or expired publisher session" } }
+      }
+    }
+  }
+}

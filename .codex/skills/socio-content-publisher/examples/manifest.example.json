@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "brand": "chezahub",
+  "timezone": "Africa/Nairobi",
+  "campaign": {
+    "name": "Physical Product Review Week",
+    "sourceWeek": "2026-07-20/2026-07-26"
+  },
+  "defaults": {
+    "platforms": ["facebook", "instagram"],
+    "overduePolicy": "roll_forward"
+  },
+  "posts": [
+    {
+      "reference": "monday-0830-ps5-guide",
+      "title": "Which PS5 is right for you?",
+      "caption": "Choose the PS5 setup that matches how you play. Shop at chezahub.co.ke or WhatsApp +254 113 033 475.",
+      "format": "carousel",
+      "media": [
+        "Monday/01_which_ps5_is_right_for_you.png",
+        "Monday/02_ps5_comparison.png"
+      ],
+      "schedule": { "date": "2026-07-20", "time": "08:30" },
+      "qaStatus": "ready",
+      "detectedText": "chezahub.co.ke +254 113 033 475",
+      "products": [
+        {
+          "name": "PS5 Slim Digital",
+          "catalogueReference": "ps5-slim-digital",
+          "displayedPrice": 67500,
+          "cataloguePrice": 67500
+        }
+      ]
+    },
+    {
+      "reference": "monday-1230-charging",
+      "title": "PS5 charging setup",
+      "caption": "Keep compatible controllers organised and ready. Confirm stock before payment.",
+      "format": "single",
+      "media": ["Monday/03_charging_station.png"],
+      "schedule": { "date": "2026-07-20", "time": "12:30" },
+      "qaStatus": "ready_after_qa",
+      "holdReason": "Confirm the displayed price against the current catalogue."
+    }
+  ]
+}
