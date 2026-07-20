@@ -23,4 +23,6 @@
 - [ ] Draft creation starts no workflow.
 - [ ] Scheduling requires exact confirmation and a current publisher session.
 
+Production was retriggered from the clean `main` branch after Vercel's temporary build-rate limit cleared.
+
 The remote API uses `SOCIO_SKILL_API_KEY` when configured. Otherwise Socio derives an isolated key from the existing `CRON_SECRET`; an authenticated administrator can read the connection details through `/api/skill-key`.
