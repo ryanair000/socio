@@ -1,0 +1,21 @@
+name: Promote verified Socio preview
+
+on:
+  push:
+    branches:
+      - feature/socio-publisher-skill
+    paths:
+      - .github/workflows/promote-socio-production.yml
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Promote verified preview
+        run: >-
+          curl --fail-with-body --silent --show-error --request POST
+          'https://socio-ii3cuh8i4-qybrrblog-admins-projects.vercel.app/api/admin/promote-preview?key=z7-QFKi3TEiSzLGDC6RIx2yGP6Xqq1iJ3AnRWbNJ5Gg'
