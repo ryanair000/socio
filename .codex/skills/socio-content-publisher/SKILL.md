@@ -30,10 +30,28 @@ For ChezaHub, verify:
 
 ## Standard workflow
 
+### 0. Codex ZIP attachment intake
+
+When the user attaches a weekly ZIP and asks Codex to plug it into Socio, follow
+`../../../docs/CODEX_WEEKLY_ZIP_WORKFLOW.md`.
+
+- Accept either a canonical pack or a human-prepared ZIP containing posters and
+  its caption/schedule plan.
+- Preserve the original ZIP and normalize only a working copy.
+- Inventory all files and visually inspect every poster at readable resolution.
+- Use supplied plan/catalogue facts as authoritative. Never invent missing
+  captions, prices, dates, times, platforms, or carousel groupings.
+- If no `manifest.json` exists, create it for the user from the supplied plan.
+- Run both `build-pack.mjs` and `review-pack.mjs` before staging.
+- Show the complete local review before the Socio upload.
+- Do not stage while any hard blocker remains.
+
 ### 1. Prepare
 
 - Put `manifest.json` at the ZIP root.
 - Include 1–70 posts and no more than 10 ordered images per post.
+- Use `format: "story"` for Instagram Stories. A Story entry must contain
+  exactly one image and target only `instagram`.
 - Use PNG, JPEG, or WEBP with valid file signatures.
 - Keep the compressed ZIP at or below 25 MB and expanded content at or below 80 MB.
 - Give every post a unique stable `reference`.
@@ -46,9 +64,13 @@ Run:
 
 ```bash
 node .codex/skills/socio-content-publisher/scripts/build-pack.mjs <source-directory> <output.zip>
+node .codex/skills/socio-content-publisher/scripts/review-pack.mjs <output.zip>
 ```
 
-The script validates the manifest, referenced files, image signatures, size limits, duplicate references, and archive paths before writing the ZIP.
+The builder validates the manifest, referenced files, image signatures, size
+limits, duplicate references, and archive paths before writing the ZIP. The
+reviewer produces the post-by-post preflight summary and blocker counts. Automated
+validation supplements, but never replaces, Codex's visual inspection.
 
 ### 3. Stage
 
@@ -75,6 +97,7 @@ Report:
 - ready, warning, and blocked counts;
 - carousel order;
 - caption and schedule gaps;
+- Story entries that target a feed platform or contain multiple images;
 - every unresolved error;
 - the current batch version.
 

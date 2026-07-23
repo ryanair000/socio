@@ -17,7 +17,9 @@ export default defineConfig({
     ],
   },
   test: {
+    fileParallelism: false,
     globals: true,
+    pool: "threads",
     restoreMocks: true,
     testTimeout: 15_000,
     projects: [
@@ -40,7 +42,9 @@ export default defineConfig({
           include: [
             "tests/week1-import.test.ts",
             "tests/content-pack.test.ts",
+            "tests/content-pack-review-script.test.ts",
             "tests/crypto.node.test.ts",
+            "tests/smmpro-sync.test.ts",
           ],
         },
       },

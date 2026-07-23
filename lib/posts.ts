@@ -58,7 +58,12 @@ function mapPosts(postRows: DbRow[], targetRows: DbRow[], mediaRows: DbRow[]) {
       title: String(row.title),
       caption: String(row.caption),
       brand: row.brand as ScheduledPost["brand"],
-      format: row.post_format === "carousel" ? "carousel" : ("single" as const),
+      format:
+        row.post_format === "carousel"
+          ? "carousel"
+          : row.post_format === "story"
+            ? "story"
+            : ("single" as const),
       imageUrl: postMedia[0].imageUrl,
       imagePathname: postMedia[0].imagePathname,
       media: postMedia,

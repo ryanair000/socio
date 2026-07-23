@@ -133,10 +133,8 @@ function PostCard({
         <strong>{post.title}</strong>
         <div className="card-meta">
           <StatusBadge status={post.status} />
-          {post.qaStatus !== "ready" ? (
-            <span className={`qa-badge qa-${post.qaStatus}`}>
-              {post.qaStatus === "hold" ? "HOLD" : "READY AFTER QA"}
-            </span>
+          {post.qaStatus === "hold" ? (
+            <span className="qa-badge qa-hold">HOLD</span>
           ) : null}
           <span className="platform-icons">
             {post.targets.map((target) => (
@@ -941,7 +939,9 @@ export function SocioApp({
                           <span>
                             {post.format === "carousel"
                               ? `${post.media.length} slides`
-                              : "Single image"}
+                              : post.format === "story"
+                                ? "Instagram Story"
+                                : "Single image"}
                           </span>
                         </div>
                         <StatusBadge status={post.status} />
@@ -998,7 +998,9 @@ export function SocioApp({
                           ·{" "}
                           {post.format === "carousel"
                             ? `${post.media.length} slides`
-                            : "Single image"}
+                            : post.format === "story"
+                              ? "Instagram Story"
+                              : "Single image"}
                         </span>
                       </div>
                       <div className="target-pills">
@@ -1138,11 +1140,9 @@ export function SocioApp({
                       </span>
                     </div>
                     <StatusBadge status={post.status} />
-                    {post.qaStatus !== "ready" ? (
-                      <div className={`qa-notice qa-${post.qaStatus}`}>
-                        <strong>
-                          {post.qaStatus === "hold" ? "HOLD" : "READY AFTER QA"}
-                        </strong>
+                    {post.qaStatus === "hold" ? (
+                      <div className="qa-notice qa-hold">
+                        <strong>HOLD</strong>
                         <span>{post.holdReason}</span>
                       </div>
                     ) : null}

@@ -37,7 +37,10 @@ const statements = [
     updated_at timestamptz NOT NULL DEFAULT now()
   )`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS post_format text NOT NULL DEFAULT 'single'
-    CHECK (post_format IN ('single', 'carousel'))`,
+    CHECK (post_format IN ('single', 'carousel', 'story'))`,
+  `ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_post_format_check`,
+  `ALTER TABLE posts ADD CONSTRAINT posts_post_format_check CHECK
+    (post_format IN ('single', 'carousel', 'story'))`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS qa_status text NOT NULL DEFAULT 'ready'`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS hold_reason text`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS source_week text`,

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title description">
+  <title id="title">SMMPro post</title>
+  <desc id="description">Placeholder artwork for a post imported from SMMPro</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b1021"/>
+      <stop offset="1" stop-color="#171219"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" rx="48" fill="url(#background)"/>
+  <circle cx="400" cy="410" r="120" fill="#ffffff" fill-opacity=".1"/>
+  <path d="M330 455V365h55l85 45-85 45z" fill="#fff"/>
+  <text x="400" y="650" fill="#fff" font-family="Arial, sans-serif" font-size="62" font-weight="700" text-anchor="middle">SMMPro</text>
+  <text x="400" y="710" fill="#f3c8d2" font-family="Arial, sans-serif" font-size="28" text-anchor="middle">Published social post</text>
+</svg>

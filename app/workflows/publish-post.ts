@@ -7,7 +7,7 @@ import {
   type TikTokPublishStatus,
 } from "@/lib/smmpro";
 import { ensureTikTokSchema } from "@/lib/schema";
-import type { Brand, PublishPlatform } from "@/lib/types";
+import type { Brand, PostFormat, PublishPlatform } from "@/lib/types";
 
 type PublishPayload = {
   postId: string;
@@ -19,6 +19,7 @@ type ClaimedPost = {
   brand: Brand;
   title: string;
   caption: string;
+  format: PostFormat;
   imageUrls: string[];
   credentialId: string | null;
 };
@@ -45,7 +46,10 @@ async function loadSchedule(postId: string, version: number) {
   return result;
 }
 
-async function claimPost(postId: string, version: number): Promise<ClaimedPost | null> {
+async function claimPost(
+  postId: string,
+  version: number,
+): Promise<ClaimedPost | null> {
   "use step";
   await ensureTikTokSchema();
   console.log(`[claimPost] START postId=${postId} version=${version}`);
@@ -53,7 +57,7 @@ async function claimPost(postId: string, version: number): Promise<ClaimedPost |
   const rows =
     await sql`UPDATE posts SET status = 'publishing', claimed_at = now(), updated_at = now(), last_error = NULL
     WHERE id = ${postId} AND schedule_version = ${version} AND status = 'scheduled'
-    RETURNING id, brand, title, caption, image_url, publisher_credential_id`;
+    RETURNING id, brand, title, caption, post_format, image_url, publisher_credential_id`;
   if (!rows[0]) {
     console.log(`[claimPost] DONE postId=${postId} claimed=false`);
     return null;
@@ -67,6 +71,7 @@ async function claimPost(postId: string, version: number): Promise<ClaimedPost |
     brand: rows[0].brand as Brand,
     title: String(rows[0].title),
     caption: String(rows[0].caption),
+    format: rows[0].post_format as PostFormat,
     imageUrls: mediaRows.length
       ? mediaRows.map((row) => String(row.image_url))
       : [String(rows[0].image_url)],
@@ -101,6 +106,7 @@ async function publishTarget(input: {
   brand: Brand;
   title: string;
   caption: string;
+  format: PostFormat;
   imageUrls: string[];
   encryptedToken: string;
 }): Promise<PublishTargetOutcome> {
@@ -214,7 +220,9 @@ async function pollTikTokStatus(input: {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "TikTok status check failed.";
-    console.log(`[pollTikTokStatus] RETRY postId=${input.postId} error=${message}`);
+    console.log(
+      `[pollTikTokStatus] RETRY postId=${input.postId} error=${message}`,
+    );
     return { ok: false as const, error: message };
   }
 }

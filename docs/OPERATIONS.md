@@ -3,10 +3,10 @@
 ## Release setup
 
 1. Pull the Vercel Development environment into `.env.local`.
-2. Set `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `SESSION_ENCRYPTION_KEY`, `SMMPRO_BASE_URL`, and a strong `CRON_SECRET` in every deployed environment.
+2. Set `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `SESSION_ENCRYPTION_KEY`, `SMMPRO_BASE_URL`, a strong `SOCIO_SYNC_SECRET`, and a strong `CRON_SECRET` in every deployed environment. Configure the same `SOCIO_SYNC_SECRET` plus `SOCIO_BASE_URL` in SMMPro.
 3. Run `npm run db:migrate` before deploying application code.
 4. Run `npm run check`.
-5. Deploy to the existing Socio project and verify `/api/cron/publish-due` returns `401` without `Authorization: Bearer <CRON_SECRET>`.
+5. Deploy to the existing Socio project and verify `/api/cron/publish-due` and `/api/integrations/smmpro/posts` return `401` without their respective bearer secrets.
 
 The migration may be rerun. It backfills stable target idempotency keys and adds QA, source-pack, claim, partial-publication, cancellation, and published-at fields.
 
@@ -45,6 +45,12 @@ The Monday Fortnite group and every other HOLD item must not be published unchan
 Before production carousel publishing, verify the deployed SMMPRO `/api/post` route accepts repeated `imageUrls` form fields and `idempotencyKey`, creates one native Facebook multi-photo post or Instagram carousel, and returns one platform result containing the final provider media ID. Socio continues to send the legacy first `imageUrl` for one-image compatibility.
 
 If the deployed SMMPRO version does not yet implement those fields, keep carousel posts as drafts; do not treat independent image posts as a carousel substitute.
+
+Before production Story publishing, verify the deployed SMMPRO `/api/post`
+route accepts `postFormat=story`, rejects Facebook as a target, creates an
+Instagram media container with `media_type=STORIES`, waits for the container,
+and publishes it through `/{ig-user-id}/media_publish`. Socio Stories use one
+image and do not attach feed captions or native stickers.
 
 ## Production smoke test
 

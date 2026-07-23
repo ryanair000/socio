@@ -35,6 +35,7 @@ const expected = [
   "/api/skill/imports/[id]/[action]/route",
   "/api/skill-key/route",
   "/api/mcp/route",
+  "/api/integrations/smmpro/posts/route",
   "/api/cron/publish-due/route",
   "/api/connections/route",
 ];

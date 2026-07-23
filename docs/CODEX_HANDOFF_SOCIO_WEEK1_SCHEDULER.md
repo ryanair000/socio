@@ -24,7 +24,7 @@ Do not expand the product with more demo modules. Replace the broad demo dashboa
 - Repository: `ryanair000/socio`
 - Branch: `main`
 - Current latest documented commit at handoff: `8754ad5d6344962c4cd97d3e706d21a2a59b5b03`
-- Production: `https://socio-beryl.vercel.app`
+- Production: `https://socio.jengasites.com`
 - Vercel project ID: `prj_Pn0fsgnopxanHeOMrywFm2q3nSy4`
 
 ### SMMPRO publishing backend

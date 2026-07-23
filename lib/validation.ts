@@ -15,8 +15,7 @@ export function isBrand(value: unknown): value is Brand {
 
 export function isPlatform(value: unknown): value is PublishPlatform {
   return (
-    typeof value === "string" &&
-    PLATFORMS.includes(value as PublishPlatform)
+    typeof value === "string" && PLATFORMS.includes(value as PublishPlatform)
   );
 }
 
@@ -122,12 +121,24 @@ export function validatePostInput(input: unknown) {
   if (!isBrand(brand)) throw new Error("Choose a valid brand.");
   if (!platforms.length) throw new Error("Choose at least one platform.");
   if (platforms.includes("tiktok") && brand !== "chezahub") {
-    throw new Error("TikTok publishing is currently available for ChezaHub only.");
+    throw new Error(
+      "TikTok publishing is currently available for ChezaHub only.",
+    );
+  }
+  if (
+    format === "story" &&
+    (platforms.length !== 1 || platforms[0] !== "instagram")
+  ) {
+    throw new Error("Instagram Stories can only publish to Instagram.");
   }
   if (format === "carousel" && media.length < 2)
     throw new Error("A carousel needs at least two slides.");
-  if (format === "single" && media.length !== 1)
-    throw new Error("An independent post must contain one image.");
+  if ((format === "single" || format === "story") && media.length !== 1)
+    throw new Error(
+      format === "story"
+        ? "An Instagram Story must contain one image."
+        : "An independent post must contain one image.",
+    );
   return {
     title,
     caption,

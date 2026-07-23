@@ -2,20 +2,26 @@
 
 Socio is a focused weekly social scheduler for ChezaHub and JengaSites:
 
-> Upload finished posters → generate complete captions → choose independent posts or a carousel → schedule → auto-publish through SMMPRO.
+> Upload finished posters → generate complete captions → choose independent posts, a carousel, or Instagram Stories → schedule → auto-publish through SMMPRO.
 
-Production: https://socio-beryl.vercel.app
+Posts published directly in SMMPro (including its Telegram publisher) are also imported into the Socio calendar through the authenticated `/api/integrations/smmpro/posts` endpoint. Replayed sync events are deduplicated, and Socio-originated publishing requests are marked so they are not imported twice.
+
+Production: https://socio.jengasites.com
 
 ## What the app does
 
 - Uploads up to 10 PNG, JPG, or WEBP posters in one batch.
 - Automatically generates a ready-to-edit Instagram caption from each poster with OpenAI vision.
 - Creates one independent post per image or combines 2–10 ordered slides into one carousel.
+- Creates Instagram-only image Stories with one image and one EAT schedule per
+  Story. Native stickers such as polls, links, questions, and sliders still
+  need to be added in Instagram.
 - Gives independent posts their own date/time and gives a carousel one shared date/time, all in EAT.
 - Saves drafts and schedules in Neon Postgres, across devices and browser sessions.
 - Stores public, immutable poster URLs in Vercel Blob for the Meta Graph API.
 - Uses Vercel Workflow to sleep until the exact scheduled instant and resume durably.
-- Publishes Facebook and Instagram single-image posts and native carousels as separate targets through SMMPRO.
+- Publishes Facebook and Instagram single-image posts, native carousels, and
+  Instagram image Stories through SMMPRO.
 - Tracks `draft`, `scheduled`, `publishing`, `published`, and `failed` states.
 - Tracks `partially_published` when one platform succeeds and another fails.
 - Records target-level attempt counts, provider post IDs, and errors.
@@ -89,3 +95,18 @@ Socio's Workflow still waits until the selected instant. At publish time it send
 Open **New Post**, select one Monday–Sunday `*_Posters_and_Captions.zip` pack, and import it. Every import is saved as a draft first. READY items can be scheduled or published after review; READY AFTER QA requires an explicit QA confirmation; HOLD remains blocked.
 
 See [docs/OPERATIONS.md](docs/OPERATIONS.md) for migration, cron, overdue publishing, recovery, and upstream SMMPRO acceptance checks.
+
+## Easiest weekly workflow with Codex
+
+Attach the complete weekly ZIP to Codex and ask it to fully review and stage the
+pack. The ZIP can already contain a root `manifest.json`, or it can contain the
+posters plus a clearly labelled caption/schedule plan for Codex to normalize.
+
+Codex inventories the source, visually checks every poster, builds a canonical
+pack, produces a deterministic preflight report, and stages it through the Socio
+import API. Staging never schedules or publishes. Draft creation and scheduling
+remain separate, explicit checkpoints.
+
+See
+[docs/CODEX_WEEKLY_ZIP_WORKFLOW.md](docs/CODEX_WEEKLY_ZIP_WORKFLOW.md) for the
+one-message intake prompt and the complete review contract.

@@ -1,6 +1,6 @@
 export const BRANDS = ["chezahub", "jengasites"] as const;
 export const PLATFORMS = ["facebook", "instagram", "tiktok"] as const;
-export const POST_FORMATS = ["single", "carousel"] as const;
+export const POST_FORMATS = ["single", "carousel", "story"] as const;
 export const POST_STATUSES = [
   "draft",
   "scheduled",

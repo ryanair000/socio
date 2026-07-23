@@ -11,7 +11,8 @@
     "check": "npm run format:check && npm run build && npm run test:routes",
     "test:routes": "node tests/routes.mjs",
     "typecheck": "tsc --noEmit",
-    "format:check": "prettier --check . --ignore-path .gitignore"
+    "format:check": "prettier --check . --ignore-path .gitignore",
+    "pack:review": "node .codex/skills/socio-content-publisher/scripts/review-pack.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

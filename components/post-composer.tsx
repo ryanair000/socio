@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarClock,
   Check,
+  CircleDashed,
   ImagePlus,
   Layers3,
   LoaderCircle,
@@ -153,7 +154,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     items.some((item) => item.captionStatus === "generating");
   const canSubmit =
     items.length > 0 &&
-    (format === "single" || items.length >= 2) &&
+    (format !== "carousel" || items.length >= 2) &&
     platforms.length > 0 &&
     (format === "carousel"
       ? carouselTitle.trim()
@@ -193,7 +194,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
     if (!carouselTitle && combined[0]) setCarouselTitle(combined[0].title);
     if (format === "carousel") {
       if (combined.length >= 2) void generateCarouselCaption(combined);
-    } else {
+    } else if (format === "single") {
       next.forEach((item) => void generateItemCaption(item));
     }
   }
@@ -331,6 +332,10 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
   function changeFormat(nextFormat: PostFormat) {
     setFormat(nextFormat);
     setError("");
+    if (nextFormat === "story") {
+      setPlatforms(["instagram"]);
+      return;
+    }
     if (nextFormat === "carousel") {
       if (!carouselTitle && items[0]) setCarouselTitle(items[0].title);
       if (items.length >= 2 && !carouselCaption) {
@@ -400,13 +405,13 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
           imagePathname = blob.pathname;
         }
         uploadedMedia.push({ imageUrl, imagePathname });
-        if (format === "single") {
+        if (format === "single" || format === "story") {
           prepared.push({
             title: item.title,
-            caption: item.caption,
+            caption: format === "story" ? "" : item.caption,
             brand,
-            format: "single",
-            platforms,
+            format,
+            platforms: format === "story" ? ["instagram"] : platforms,
             imageUrl,
             imagePathname,
             media: [{ imageUrl, imagePathname }],
@@ -476,7 +481,13 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
 
   const countLabel = useMemo(
     () =>
-      `${items.length} of 10 ${format === "carousel" ? "slide" : "poster"}${items.length === 1 ? "" : "s"}`,
+      `${items.length} of 10 ${
+        format === "carousel"
+          ? "slide"
+          : format === "story"
+            ? "story"
+            : "poster"
+      }${items.length === 1 ? "" : "s"}`,
     [format, items.length],
   );
 
@@ -503,7 +514,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
                 ? "Update the details or move this post to a new time."
                 : format === "carousel"
                   ? "Combine the selected slides into one scheduled carousel."
-                  : "Each image becomes its own independently scheduled post."}
+                  : format === "story"
+                    ? "Each image becomes its own scheduled Instagram Story."
+                    : "Each image becomes its own independently scheduled post."}
             </p>
           </div>
           <button
@@ -533,6 +546,13 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
               >
                 <Layers3 size={16} /> Carousel
               </button>
+              <button
+                type="button"
+                className={format === "story" ? "format active" : "format"}
+                onClick={() => changeFormat("story")}
+              >
+                <CircleDashed size={16} /> Instagram Stories
+              </button>
             </div>
           </fieldset>
           <label>
@@ -548,7 +568,10 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
           <fieldset>
             <legend>Publish to</legend>
             <div className="platform-options">
-              {(["facebook", "instagram"] as Platform[]).map((platform) => (
+              {(format === "story"
+                ? (["instagram"] as Platform[])
+                : (["facebook", "instagram"] as Platform[])
+              ).map((platform) => (
                 <button
                   key={platform}
                   type="button"
@@ -558,6 +581,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
                       : "platform"
                   }
                   onClick={() => togglePlatform(platform)}
+                  disabled={format === "story"}
                 >
                   {platforms.includes(platform) ? <Check size={15} /> : null}
                   {platform[0].toUpperCase() + platform.slice(1)}
@@ -702,7 +726,7 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
                         </button>
                       ) : null}
                     </div>
-                    {format === "single" ? (
+                    {format !== "carousel" ? (
                       <>
                         <label>
                           Title
@@ -714,50 +738,58 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
                             }
                           />
                         </label>
-                        <div className="caption-field">
-                          <div className="caption-field-heading">
-                            <label htmlFor={`caption-${item.key}`}>
-                              Instagram caption
-                            </label>
-                            <button
-                              type="button"
-                              className="ai-button compact"
-                              onClick={() => generateItemCaption(item)}
-                              disabled={item.captionStatus === "generating"}
-                            >
-                              {item.captionStatus === "generating" ? (
-                                <LoaderCircle className="spin" size={14} />
-                              ) : (
-                                <Sparkles size={14} />
-                              )}
-                              {item.caption ? "Regenerate" : "Generate"}
-                            </button>
+                        {format === "single" ? (
+                          <div className="caption-field">
+                            <div className="caption-field-heading">
+                              <label htmlFor={`caption-${item.key}`}>
+                                Instagram caption
+                              </label>
+                              <button
+                                type="button"
+                                className="ai-button compact"
+                                onClick={() => generateItemCaption(item)}
+                                disabled={item.captionStatus === "generating"}
+                              >
+                                {item.captionStatus === "generating" ? (
+                                  <LoaderCircle className="spin" size={14} />
+                                ) : (
+                                  <Sparkles size={14} />
+                                )}
+                                {item.caption ? "Regenerate" : "Generate"}
+                              </button>
+                            </div>
+                            <textarea
+                              id={`caption-${item.key}`}
+                              value={item.caption}
+                              maxLength={2200}
+                              rows={5}
+                              placeholder="ChatGPT is preparing a complete caption…"
+                              onChange={(event) =>
+                                updateItem(
+                                  item.key,
+                                  "caption",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                            {item.captionStatus === "generating" ? (
+                              <p className="caption-note">
+                                <Sparkles size={13} /> Reading poster and
+                                writing…
+                              </p>
+                            ) : null}
+                            {item.captionError ? (
+                              <p className="caption-error" role="alert">
+                                {item.captionError}
+                              </p>
+                            ) : null}
                           </div>
-                          <textarea
-                            id={`caption-${item.key}`}
-                            value={item.caption}
-                            maxLength={2200}
-                            rows={5}
-                            placeholder="ChatGPT is preparing a complete caption…"
-                            onChange={(event) =>
-                              updateItem(
-                                item.key,
-                                "caption",
-                                event.target.value,
-                              )
-                            }
-                          />
-                          {item.captionStatus === "generating" ? (
-                            <p className="caption-note">
-                              <Sparkles size={13} /> Reading poster and writing…
-                            </p>
-                          ) : null}
-                          {item.captionError ? (
-                            <p className="caption-error" role="alert">
-                              {item.captionError}
-                            </p>
-                          ) : null}
-                        </div>
+                        ) : (
+                          <p className="slide-help">
+                            Stories publish full-screen to Instagram. Captions
+                            are not attached to Story media.
+                          </p>
+                        )}
                         <div className="date-time-row">
                           <label>
                             Schedule date
@@ -794,8 +826,12 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
           ) : (
             <div className="empty-composer">
               Choose{" "}
-              {format === "carousel" ? "2–10 slides" : "one or more posters"} to
-              begin.
+              {format === "carousel"
+                ? "2–10 slides"
+                : format === "story"
+                  ? "one or more Story images"
+                  : "one or more posters"}{" "}
+              to begin.
             </div>
           )}
         </div>
@@ -850,7 +886,9 @@ export function PostComposer({ editing, onClose, onSaved }: Props) {
               ? "Update schedule"
               : format === "carousel"
                 ? "Schedule carousel"
-                : "Schedule posts"}
+                : format === "story"
+                  ? "Schedule Stories"
+                  : "Schedule posts"}
           </button>
         </footer>
       </section>

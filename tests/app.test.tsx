@@ -481,6 +481,43 @@ describe("Socio weekly scheduler", () => {
     expect(uploadMock).toHaveBeenCalledTimes(2);
   });
 
+  it("creates Instagram-only Story drafts without feed captions", async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ ids: ["story-1"] }),
+    });
+    render(<PostComposer onClose={() => undefined} onSaved={onSaved} />);
+    await user.click(screen.getByRole("button", { name: "Instagram Stories" }));
+    await user.upload(screen.getByLabelText(/Choose finished poster images/), [
+      new File(["story"], "morning-story.jpg", { type: "image/jpeg" }),
+    ]);
+    expect(screen.getByText("1 of 10 story")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Captions are not attached to Story media/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+
+    const request = fetchMock.mock.calls.find(
+      (call) => call[0] === "/api/posts",
+    );
+    const body = JSON.parse((request?.[1] as RequestInit).body as string) as {
+      items: Array<{
+        format: string;
+        platforms: string[];
+        caption: string;
+      }>;
+    };
+    expect(body.items[0]).toMatchObject({
+      format: "story",
+      platforms: ["instagram"],
+      caption: "",
+    });
+  });
+
   it("converts Nairobi calendar input to the correct UTC instant", () => {
     expect(nairobiInputToIso("2026-07-13", "19:30")).toBe(
       "2026-07-13T16:30:00.000Z",
@@ -517,6 +554,26 @@ describe("Socio weekly scheduler", () => {
       qaStatus: "hold",
       scheduledAt: new Date("2026-07-14T05:00:00.000Z"),
     });
+  });
+
+  it("rejects Stories outside Instagram", () => {
+    expect(() =>
+      validatePostInput({
+        title: "Morning Story",
+        caption: "",
+        brand: "chezahub",
+        platforms: ["facebook", "instagram"],
+        format: "story",
+        imageUrl: "https://store.public.blob.vercel-storage.com/story.jpg",
+        imagePathname: "stories/story.jpg",
+        media: [
+          {
+            imageUrl: "https://store.public.blob.vercel-storage.com/story.jpg",
+            imagePathname: "stories/story.jpg",
+          },
+        ],
+      }),
+    ).toThrow(/Stories can only publish to Instagram/i);
   });
 
   it("has no serious accessibility violations on the main workflow", async () => {

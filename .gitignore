@@ -11,3 +11,7 @@ out
 app/.well-known/workflow
 .playwright-cli
 /.swc
+/.tmp
+/output
+/tmp
+/socio-client-app

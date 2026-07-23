@@ -6,7 +6,7 @@ import {
   type OverduePolicy,
   type ParsedContentPack,
 } from "@/lib/content-pack";
-import type { PublishPlatform, QaStatus } from "@/lib/types";
+import type { PostFormat, PublishPlatform, QaStatus } from "@/lib/types";
 
 export type UploadedImportAsset = {
   filename: string;
@@ -43,7 +43,7 @@ export type ImportDetail = ImportSummary & {
     position: number;
     title: string;
     caption: string;
-    format: "single" | "carousel";
+    format: PostFormat;
     platforms: PublishPlatform[];
     scheduledAt: string | null;
     qaStatus: QaStatus;
@@ -200,13 +200,18 @@ function summaryFromRow(row: Record<string, unknown>): ImportSummary {
   };
 }
 
-async function addEvent(batchId: string, eventType: string, details: unknown = {}) {
+async function addEvent(
+  batchId: string,
+  eventType: string,
+  details: unknown = {},
+) {
   await getSql()`INSERT INTO import_events (id, batch_id, event_type, details)
     VALUES (${randomUUID()}, ${batchId}, ${eventType}, ${JSON.stringify(details)}::jsonb)`;
 }
 
 async function batchForMutation(batchId: string, expectedVersion: number) {
-  const rows = await getSql()`SELECT * FROM import_batches WHERE id = ${batchId}`;
+  const rows =
+    await getSql()`SELECT * FROM import_batches WHERE id = ${batchId}`;
   if (!rows[0]) throw new Error("Import batch was not found.");
   if (Number(rows[0].version) !== expectedVersion) {
     throw new Error("STALE_IMPORT_VERSION");
@@ -216,11 +221,15 @@ async function batchForMutation(batchId: string, expectedVersion: number) {
 
 export async function findImportByHash(packHash: string) {
   await ensureImportSchema();
-  const rows = await getSql()`SELECT id FROM import_batches WHERE pack_hash = ${packHash}`;
+  const rows =
+    await getSql()`SELECT id FROM import_batches WHERE pack_hash = ${packHash}`;
   return rows[0] ? String(rows[0].id) : null;
 }
 
-export async function stageImport(pack: ParsedContentPack, uploadedAssets: UploadedImportAsset[]) {
+export async function stageImport(
+  pack: ParsedContentPack,
+  uploadedAssets: UploadedImportAsset[],
+) {
   await ensureImportSchema();
   await ensureTikTokSchema();
   const existing = await findImportByHash(pack.packHash);
@@ -234,10 +243,23 @@ export async function stageImport(pack: ParsedContentPack, uploadedAssets: Uploa
     assetByName.set(asset.filename.toLowerCase(), asset);
     assetByName.set(asset.filename.split("/").pop()!.toLowerCase(), asset);
   }
-  const errorsByRef = new Set(pack.checks.filter((check) => check.severity === "error" && check.entryRef).map((check) => check.entryRef));
-  const warningRefs = new Set(pack.checks.filter((check) => check.severity === "warning" && check.entryRef).map((check) => check.entryRef));
-  const blockedCount = pack.entries.filter((entry) => errorsByRef.has(entry.reference)).length;
-  const warningCount = pack.entries.filter((entry) => warningRefs.has(entry.reference) && !errorsByRef.has(entry.reference)).length;
+  const errorsByRef = new Set(
+    pack.checks
+      .filter((check) => check.severity === "error" && check.entryRef)
+      .map((check) => check.entryRef),
+  );
+  const warningRefs = new Set(
+    pack.checks
+      .filter((check) => check.severity === "warning" && check.entryRef)
+      .map((check) => check.entryRef),
+  );
+  const blockedCount = pack.entries.filter((entry) =>
+    errorsByRef.has(entry.reference),
+  ).length;
+  const warningCount = pack.entries.filter(
+    (entry) =>
+      warningRefs.has(entry.reference) && !errorsByRef.has(entry.reference),
+  ).length;
   const readyCount = pack.entries.length - blockedCount - warningCount;
   const sql = getSql();
   const queries = [
@@ -280,8 +302,14 @@ export async function stageImport(pack: ParsedContentPack, uploadedAssets: Uploa
     )`);
     entry.media.forEach((filename, mediaPosition) => {
       const key = filename.toLowerCase();
-      const assetId = assetIds.get(key) ?? assetIds.get(filename.split("/").pop()!.toLowerCase());
-      if (!assetId || !assetByName.get(key) && !assetByName.get(filename.split("/").pop()!.toLowerCase())) {
+      const assetId =
+        assetIds.get(key) ??
+        assetIds.get(filename.split("/").pop()!.toLowerCase());
+      if (
+        !assetId ||
+        (!assetByName.get(key) &&
+          !assetByName.get(filename.split("/").pop()!.toLowerCase()))
+      ) {
         throw new Error(`Uploaded asset mapping is missing ${filename}.`);
       }
       queries.push(sql`INSERT INTO import_entry_media (entry_id, asset_id, position)
@@ -293,7 +321,7 @@ export async function stageImport(pack: ParsedContentPack, uploadedAssets: Uploa
     queries.push(sql`INSERT INTO import_checks (
       id, batch_id, entry_id, code, severity, message
     ) VALUES (
-      ${randomUUID()}, ${batchId}, ${check.entryRef ? entryIds.get(check.entryRef) ?? null : null},
+      ${randomUUID()}, ${batchId}, ${check.entryRef ? (entryIds.get(check.entryRef) ?? null) : null},
       ${check.code}, ${check.severity}, ${check.message}
     )`);
   }
@@ -316,20 +344,25 @@ export async function listImports(limit = 50) {
 export async function getImport(batchId: string): Promise<ImportDetail | null> {
   await ensureImportSchema();
   const sql = getSql();
-  const batchRows = await sql`SELECT * FROM import_batches WHERE id = ${batchId}`;
+  const batchRows =
+    await sql`SELECT * FROM import_batches WHERE id = ${batchId}`;
   if (!batchRows[0]) return null;
-  const [entryRows, assetRows, mediaRows, checkRows, eventRows] = await Promise.all([
-    sql`SELECT * FROM import_entries WHERE batch_id = ${batchId} ORDER BY position`,
-    sql`SELECT * FROM import_assets WHERE batch_id = ${batchId}`,
-    sql`SELECT iem.entry_id, iem.position, ia.* FROM import_entry_media iem
+  const [entryRows, assetRows, mediaRows, checkRows, eventRows] =
+    await Promise.all([
+      sql`SELECT * FROM import_entries WHERE batch_id = ${batchId} ORDER BY position`,
+      sql`SELECT * FROM import_assets WHERE batch_id = ${batchId}`,
+      sql`SELECT iem.entry_id, iem.position, ia.* FROM import_entry_media iem
       JOIN import_assets ia ON ia.id = iem.asset_id
       WHERE ia.batch_id = ${batchId} ORDER BY iem.entry_id, iem.position`,
-    sql`SELECT * FROM import_checks WHERE batch_id = ${batchId} ORDER BY created_at`,
-    sql`SELECT * FROM import_events WHERE batch_id = ${batchId} ORDER BY created_at DESC LIMIT 100`,
-  ]);
+      sql`SELECT * FROM import_checks WHERE batch_id = ${batchId} ORDER BY created_at`,
+      sql`SELECT * FROM import_events WHERE batch_id = ${batchId} ORDER BY created_at DESC LIMIT 100`,
+    ]);
   const assets = new Map(assetRows.map((row) => [String(row.id), row]));
   void assets;
-  const mediaByEntry = new Map<string, ImportDetail["entries"][number]["media"]>();
+  const mediaByEntry = new Map<
+    string,
+    ImportDetail["entries"][number]["media"]
+  >();
   for (const row of mediaRows) {
     const entryId = String(row.entry_id);
     const values = mediaByEntry.get(entryId) ?? [];
@@ -352,16 +385,22 @@ export async function getImport(batchId: string): Promise<ImportDetail | null> {
     message: String(row.message),
     resolved: Boolean(row.resolved),
   }));
-  const checksByEntry = new Map<string, ImportDetail["entries"][number]["checks"]>();
+  const checksByEntry = new Map<
+    string,
+    ImportDetail["entries"][number]["checks"]
+  >();
   for (const check of checks) {
     if (!check.entryId) continue;
-    checksByEntry.set(check.entryId, [...(checksByEntry.get(check.entryId) ?? []), {
-      id: check.id,
-      code: check.code,
-      severity: check.severity,
-      message: check.message,
-      resolved: check.resolved,
-    }]);
+    checksByEntry.set(check.entryId, [
+      ...(checksByEntry.get(check.entryId) ?? []),
+      {
+        id: check.id,
+        code: check.code,
+        severity: check.severity,
+        message: check.message,
+        resolved: check.resolved,
+      },
+    ]);
   }
   return {
     ...summaryFromRow(batchRows[0] as Record<string, unknown>),
@@ -372,9 +411,18 @@ export async function getImport(batchId: string): Promise<ImportDetail | null> {
       position: Number(row.position),
       title: String(row.title),
       caption: String(row.caption),
-      format: row.post_format === "carousel" ? "carousel" : "single",
-      platforms: (Array.isArray(row.platforms) ? row.platforms : []) as PublishPlatform[],
-      scheduledAt: row.scheduled_at ? new Date(String(row.scheduled_at)).toISOString() : null,
+      format:
+        row.post_format === "carousel"
+          ? "carousel"
+          : row.post_format === "story"
+            ? "story"
+            : "single",
+      platforms: (Array.isArray(row.platforms)
+        ? row.platforms
+        : []) as PublishPlatform[],
+      scheduledAt: row.scheduled_at
+        ? new Date(String(row.scheduled_at)).toISOString()
+        : null,
       qaStatus: row.qa_status as QaStatus,
       holdReason: row.hold_reason ? String(row.hold_reason) : null,
       status: String(row.status),
@@ -405,24 +453,46 @@ export async function updateImportEntry(input: {
 }) {
   await ensureImportSchema();
   await batchForMutation(input.batchId, input.expectedVersion);
-  const current = await getSql()`SELECT * FROM import_entries WHERE id = ${input.entryId} AND batch_id = ${input.batchId}`;
+  const current =
+    await getSql()`SELECT * FROM import_entries WHERE id = ${input.entryId} AND batch_id = ${input.batchId}`;
   if (!current[0]) throw new Error("Import entry was not found.");
   if (!["staged", "blocked", "approved"].includes(String(current[0].status))) {
     throw new Error("Committed import entries cannot be edited here.");
   }
-  const title = input.title === undefined ? String(current[0].title) : input.title.trim();
-  const caption = input.caption === undefined ? String(current[0].caption) : input.caption.trim();
-  if (!title || title.length > 120) throw new Error("Title must be between 1 and 120 characters.");
-  if (caption.length > 2200) throw new Error("Caption cannot exceed 2,200 characters.");
-  const scheduledAt = input.scheduledAt === undefined
-    ? current[0].scheduled_at ? new Date(String(current[0].scheduled_at)).toISOString() : null
-    : input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null;
-  const platforms = input.platforms ?? (current[0].platforms as PublishPlatform[]);
+  const title =
+    input.title === undefined ? String(current[0].title) : input.title.trim();
+  const caption =
+    input.caption === undefined
+      ? String(current[0].caption)
+      : input.caption.trim();
+  if (!title || title.length > 120)
+    throw new Error("Title must be between 1 and 120 characters.");
+  if (caption.length > 2200)
+    throw new Error("Caption cannot exceed 2,200 characters.");
+  const scheduledAt =
+    input.scheduledAt === undefined
+      ? current[0].scheduled_at
+        ? new Date(String(current[0].scheduled_at)).toISOString()
+        : null
+      : input.scheduledAt
+        ? new Date(input.scheduledAt).toISOString()
+        : null;
+  const platforms =
+    input.platforms ?? (current[0].platforms as PublishPlatform[]);
   if (!platforms.length) throw new Error("Choose at least one platform.");
+  if (
+    String(current[0].post_format) === "story" &&
+    (platforms.length !== 1 || platforms[0] !== "instagram")
+  ) {
+    throw new Error("Instagram Stories can only publish to Instagram.");
+  }
   const qaStatus = input.qaStatus ?? (current[0].qa_status as QaStatus);
-  const holdReason = input.holdReason === undefined
-    ? current[0].hold_reason ? String(current[0].hold_reason) : null
-    : input.holdReason?.trim() || null;
+  const holdReason =
+    input.holdReason === undefined
+      ? current[0].hold_reason
+        ? String(current[0].hold_reason)
+        : null
+      : input.holdReason?.trim() || null;
   await getSql().transaction([
     getSql()`UPDATE import_entries SET title = ${title}, caption = ${caption},
       scheduled_at = ${scheduledAt}, platforms = ${JSON.stringify(platforms)}::jsonb,
@@ -447,7 +517,10 @@ export async function approveImport(input: {
   await batchForMutation(input.batchId, input.expectedVersion);
   const sql = getSql();
   const entries = input.entryIds?.length
-    ? await sql.query("SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) ORDER BY position", [input.batchId, input.entryIds])
+    ? await sql.query(
+        "SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) ORDER BY position",
+        [input.batchId, input.entryIds],
+      )
     : await sql`SELECT * FROM import_entries WHERE batch_id = ${input.batchId} ORDER BY position`;
   if (!entries.length) throw new Error("No import entries were selected.");
   const approved: string[] = [];
@@ -458,11 +531,19 @@ export async function approveImport(input: {
     const hardChecks = await sql`SELECT message FROM import_checks
       WHERE entry_id = ${entryId} AND severity = 'error' AND resolved = false`;
     if (hardChecks.length || String(row.qa_status) === "hold") {
-      blocked.push({ id: entryId, reason: hardChecks.map((check) => String(check.message)).join(" ") || String(row.hold_reason ?? "QA hold") });
+      blocked.push({
+        id: entryId,
+        reason:
+          hardChecks.map((check) => String(check.message)).join(" ") ||
+          String(row.hold_reason ?? "QA hold"),
+      });
       continue;
     }
     if (String(row.qa_status) === "ready_after_qa" && !input.confirmQa) {
-      blocked.push({ id: entryId, reason: "Confirm artwork QA before approval." });
+      blocked.push({
+        id: entryId,
+        reason: "Confirm artwork QA before approval.",
+      });
       continue;
     }
     approved.push(entryId);
@@ -492,7 +573,10 @@ export async function commitImportDrafts(input: {
   const batch = await batchForMutation(input.batchId, input.expectedVersion);
   const sql = getSql();
   const entries = input.entryIds?.length
-    ? await sql.query("SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) ORDER BY position", [input.batchId, input.entryIds])
+    ? await sql.query(
+        "SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) ORDER BY position",
+        [input.batchId, input.entryIds],
+      )
     : await sql`SELECT * FROM import_entries WHERE batch_id = ${input.batchId} ORDER BY position`;
   const queries = [];
   const created: Array<{ entryId: string; postId: string }> = [];
@@ -502,7 +586,8 @@ export async function commitImportDrafts(input: {
     const media = await sql`SELECT ia.image_url, ia.image_pathname, iem.position
       FROM import_entry_media iem JOIN import_assets ia ON ia.id = iem.asset_id
       WHERE iem.entry_id = ${String(entry.id)} ORDER BY iem.position`;
-    if (!media.length) throw new Error(`Import entry ${String(entry.source_ref)} has no media.`);
+    if (!media.length)
+      throw new Error(`Import entry ${String(entry.source_ref)} has no media.`);
     const postId = randomUUID();
     const sourceRef = `import:${input.batchId}:${String(entry.source_ref)}`;
     created.push({ entryId: String(entry.id), postId });
@@ -519,7 +604,9 @@ export async function commitImportDrafts(input: {
       queries.push(sql`INSERT INTO post_media (post_id, position, image_url, image_pathname)
         VALUES (${postId}, ${Number(item.position)}, ${String(item.image_url)}, ${String(item.image_pathname)})`);
     }
-    const platforms = (Array.isArray(entry.platforms) ? entry.platforms : []) as PublishPlatform[];
+    const platforms = (
+      Array.isArray(entry.platforms) ? entry.platforms : []
+    ) as PublishPlatform[];
     for (const platform of platforms) {
       queries.push(sql`INSERT INTO post_targets (post_id, platform, status, idempotency_key)
         VALUES (${postId}, ${platform}, 'draft', ${`${postId}:${platform}`})`);
@@ -527,7 +614,8 @@ export async function commitImportDrafts(input: {
     queries.push(sql`UPDATE import_entries SET status = 'committed', post_id = ${postId},
       committed_at = now(), updated_at = now() WHERE id = ${String(entry.id)}`);
   }
-  if (!created.length) throw new Error("No approved entries are waiting to become drafts.");
+  if (!created.length)
+    throw new Error("No approved entries are waiting to become drafts.");
   queries.push(sql`UPDATE import_batches SET status = 'committed', version = version + 1,
     updated_at = now() WHERE id = ${input.batchId}`);
   queries.push(sql`INSERT INTO import_events (id, batch_id, event_type, details)
@@ -549,30 +637,51 @@ export async function scheduleImportEntries(input: {
   await batchForMutation(input.batchId, input.expectedVersion);
   const sql = getSql();
   const entries = input.entryIds?.length
-    ? await sql.query("SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) AND post_id IS NOT NULL ORDER BY position", [input.batchId, input.entryIds])
+    ? await sql.query(
+        "SELECT * FROM import_entries WHERE batch_id = $1 AND id = ANY($2::uuid[]) AND post_id IS NOT NULL ORDER BY position",
+        [input.batchId, input.entryIds],
+      )
     : await sql`SELECT * FROM import_entries WHERE batch_id = ${input.batchId} AND post_id IS NOT NULL ORDER BY position`;
-  const candidates = entries.filter((row) => ["committed", "scheduled"].includes(String(row.status)));
-  if (!candidates.length) throw new Error("No committed drafts are available to schedule.");
+  const candidates = entries.filter((row) =>
+    ["committed", "scheduled"].includes(String(row.status)),
+  );
+  if (!candidates.length)
+    throw new Error("No committed drafts are available to schedule.");
   const proposed = applyOverduePolicy(
-    candidates.map((row) => row.scheduled_at ? new Date(String(row.scheduled_at)) : null),
+    candidates.map((row) =>
+      row.scheduled_at ? new Date(String(row.scheduled_at)) : null,
+    ),
     input.policy,
     new Date(),
     input.staggerMinutes,
   );
   const queries = [];
-  const scheduled: Array<{ entryId: string; postId: string; version: number; scheduledAt: string }> = [];
+  const scheduled: Array<{
+    entryId: string;
+    postId: string;
+    version: number;
+    scheduledAt: string;
+  }> = [];
   for (let index = 0; index < candidates.length; index += 1) {
     const row = candidates[index];
     const scheduledAt = proposed[index];
     if (!scheduledAt) continue;
     if (scheduledAt >= input.publisherExpiresAt) {
-      throw new Error("A proposed time is beyond the current publisher session. Sign in closer to that date.");
+      throw new Error(
+        "A proposed time is beyond the current publisher session. Sign in closer to that date.",
+      );
     }
     const postId = String(row.post_id);
-    const postRows = await sql`SELECT schedule_version FROM posts WHERE id = ${postId} AND status IN ('draft', 'scheduled')`;
+    const postRows =
+      await sql`SELECT schedule_version FROM posts WHERE id = ${postId} AND status IN ('draft', 'scheduled')`;
     if (!postRows[0]) continue;
     const version = Number(postRows[0].schedule_version) + 1;
-    scheduled.push({ entryId: String(row.id), postId, version, scheduledAt: scheduledAt.toISOString() });
+    scheduled.push({
+      entryId: String(row.id),
+      postId,
+      version,
+      scheduledAt: scheduledAt.toISOString(),
+    });
     queries.push(sql`UPDATE posts SET status = 'scheduled', scheduled_at = ${scheduledAt.toISOString()},
       schedule_version = ${version}, publisher_credential_id = ${input.publisherCredentialId},
       workflow_run_id = NULL, claimed_at = NULL, last_error = NULL, updated_at = now()
@@ -582,7 +691,8 @@ export async function scheduleImportEntries(input: {
     queries.push(sql`UPDATE import_entries SET status = 'scheduled', scheduled_at = ${scheduledAt.toISOString()},
       updated_at = now() WHERE id = ${String(row.id)}`);
   }
-  if (!scheduled.length) throw new Error("The selected overdue policy left every post as a draft.");
+  if (!scheduled.length)
+    throw new Error("The selected overdue policy left every post as a draft.");
   queries.push(sql`UPDATE import_batches SET status = 'scheduled', version = version + 1,
     updated_at = now() WHERE id = ${input.batchId}`);
   queries.push(sql`INSERT INTO import_events (id, batch_id, event_type, details)
@@ -591,12 +701,18 @@ export async function scheduleImportEntries(input: {
   return { scheduled, batch: await getImport(input.batchId) };
 }
 
-export async function cancelImport(input: { batchId: string; expectedVersion: number }) {
+export async function cancelImport(input: {
+  batchId: string;
+  expectedVersion: number;
+}) {
   await ensureImportSchema();
   await batchForMutation(input.batchId, input.expectedVersion);
   const sql = getSql();
-  const entries = await sql`SELECT id, post_id FROM import_entries WHERE batch_id = ${input.batchId}`;
-  const postIds = entries.filter((row) => row.post_id).map((row) => String(row.post_id));
+  const entries =
+    await sql`SELECT id, post_id FROM import_entries WHERE batch_id = ${input.batchId}`;
+  const postIds = entries
+    .filter((row) => row.post_id)
+    .map((row) => String(row.post_id));
   const queries = [
     sql`UPDATE import_entries SET status = 'cancelled', updated_at = now()
       WHERE batch_id = ${input.batchId} AND status NOT IN ('cancelled')`,
@@ -606,8 +722,18 @@ export async function cancelImport(input: { batchId: string; expectedVersion: nu
       VALUES (${randomUUID()}, ${input.batchId}, 'cancelled', ${JSON.stringify({ postIds })}::jsonb)`,
   ];
   if (postIds.length) {
-    queries.push(sql.query("UPDATE posts SET status = 'cancelled', schedule_version = schedule_version + 1, workflow_run_id = NULL, claimed_at = NULL, updated_at = now() WHERE id = ANY($1::uuid[]) AND status IN ('draft', 'scheduled')", [postIds]));
-    queries.push(sql.query("UPDATE post_targets SET status = 'cancelled', last_error = NULL WHERE post_id = ANY($1::uuid[]) AND status NOT IN ('published', 'cancelled')", [postIds]));
+    queries.push(
+      sql.query(
+        "UPDATE posts SET status = 'cancelled', schedule_version = schedule_version + 1, workflow_run_id = NULL, claimed_at = NULL, updated_at = now() WHERE id = ANY($1::uuid[]) AND status IN ('draft', 'scheduled')",
+        [postIds],
+      ),
+    );
+    queries.push(
+      sql.query(
+        "UPDATE post_targets SET status = 'cancelled', last_error = NULL WHERE post_id = ANY($1::uuid[]) AND status NOT IN ('published', 'cancelled')",
+        [postIds],
+      ),
+    );
   }
   await sql.transaction(queries);
   return getImport(input.batchId);

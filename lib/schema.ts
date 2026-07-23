@@ -7,7 +7,10 @@ export function ensureTikTokSchema() {
     tikTokSchemaPromise = (async () => {
       const sql = getSql();
       await sql.transaction([
-        sql`SELECT pg_advisory_xact_lock(hashtext('socio:tiktok-schema:v1'))`,
+        sql`SELECT pg_advisory_xact_lock(hashtext('socio:publisher-schema:v2'))`,
+        sql`ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_post_format_check`,
+        sql`ALTER TABLE posts ADD CONSTRAINT posts_post_format_check CHECK
+          (post_format IN ('single', 'carousel', 'story'))`,
         sql`ALTER TABLE post_targets ADD COLUMN IF NOT EXISTS provider_publish_id text`,
         sql`ALTER TABLE post_targets ADD COLUMN IF NOT EXISTS provider_response jsonb`,
         sql`ALTER TABLE post_targets DROP CONSTRAINT IF EXISTS post_targets_platform_check`,

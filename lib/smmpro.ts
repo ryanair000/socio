@@ -1,5 +1,5 @@
 import { decryptSecret } from "@/lib/crypto";
-import type { Brand, PublishPlatform } from "@/lib/types";
+import type { Brand, PostFormat, PublishPlatform } from "@/lib/types";
 
 const UPSTREAM_COOKIE = "auth-token";
 
@@ -75,7 +75,9 @@ export async function getTikTokConnectionStatus(
     headers: { cookie: upstreamCookie(encryptedToken) },
     cache: "no-store",
   });
-  const body = (await response.json().catch(() => ({}))) as TikTokConnectionStatus & {
+  const body = (await response
+    .json()
+    .catch(() => ({}))) as TikTokConnectionStatus & {
     error?: string;
   };
   if (!response.ok) {
@@ -108,13 +110,17 @@ export async function getTikTokConnectUrl(
 }
 
 export async function disconnectTikTok(encryptedToken: string) {
-  const response = await fetch(`${baseUrl()}/api/integrations/tiktok/disconnect`, {
-    method: "POST",
-    headers: { cookie: upstreamCookie(encryptedToken) },
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${baseUrl()}/api/integrations/tiktok/disconnect`,
+    {
+      method: "POST",
+      headers: { cookie: upstreamCookie(encryptedToken) },
+      cache: "no-store",
+    },
+  );
   const body = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) throw new Error(body.error || "Could not disconnect TikTok.");
+  if (!response.ok)
+    throw new Error(body.error || "Could not disconnect TikTok.");
 }
 
 type PublishResult = {
@@ -133,6 +139,7 @@ export async function publishWithSmmpro(input: {
   platform: PublishPlatform;
   title: string;
   caption: string;
+  format: PostFormat;
   imageUrls: string[];
   idempotencyKey: string;
 }): Promise<PublishResult> {
@@ -151,6 +158,7 @@ export async function publishWithSmmpro(input: {
               caption: input.caption,
               imageUrls: input.imageUrls,
               idempotencyKey: input.idempotencyKey,
+              source: "socio",
             }),
             cache: "no-store",
           })
@@ -211,6 +219,7 @@ async function publishMetaTarget(input: {
   platform: PublishPlatform;
   title: string;
   caption: string;
+  format: PostFormat;
   imageUrls: string[];
   idempotencyKey: string;
 }) {
@@ -218,11 +227,13 @@ async function publishMetaTarget(input: {
   form.set("accountId", input.brand);
   form.set("title", input.title);
   form.set("message", input.caption);
+  form.set("postFormat", input.format);
   form.set("imageUrl", input.imageUrls[0]);
   input.imageUrls.forEach((imageUrl) => form.append("imageUrls", imageUrl));
   form.set("publishFacebook", String(input.platform === "facebook"));
   form.set("publishInstagram", String(input.platform === "instagram"));
   form.set("idempotencyKey", input.idempotencyKey);
+  form.set("source", "socio");
   return fetch(`${baseUrl()}/api/post`, {
     method: "POST",
     headers: { cookie: upstreamCookie(input.encryptedToken) },
@@ -257,11 +268,15 @@ export async function getTikTokPublishStatus(
       cache: "no-store",
     },
   );
-  const body = (await response.json().catch(() => ({}))) as TikTokPublishStatus & {
+  const body = (await response
+    .json()
+    .catch(() => ({}))) as TikTokPublishStatus & {
     error?: string;
   };
   if (!response.ok) {
-    throw new Error(body.error || "Could not check the TikTok publishing status.");
+    throw new Error(
+      body.error || "Could not check the TikTok publishing status.",
+    );
   }
   return body;
 }
