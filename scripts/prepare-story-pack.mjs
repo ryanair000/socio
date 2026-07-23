@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import sharp from "sharp";
 
 const [sourceArg, startDateArg, outputArg] = process.argv.slice(2);
 if (!sourceArg || !startDateArg || !outputArg) {
@@ -57,7 +58,9 @@ function parseCsv(text) {
     header.replace(/^\uFEFF/, "").trim(),
   );
   return records.map((record) =>
-    Object.fromEntries(headers.map((header, index) => [header, record[index] ?? ""])),
+    Object.fromEntries(
+      headers.map((header, index) => [header, record[index] ?? ""]),
+    ),
   );
 }
 
@@ -75,7 +78,8 @@ const schedulePath = path.join(
 const ready = parseCsv(fs.readFileSync(schedulePath, "utf8")).filter((row) =>
   row.Status.startsWith("Ready"),
 );
-if (!ready.length) throw new Error("The schedule contains no ready Story images.");
+if (!ready.length)
+  throw new Error("The schedule contains no ready Story images.");
 
 fs.mkdirSync(output, { recursive: false });
 const builder = path.resolve(
@@ -86,30 +90,40 @@ for (const day of [...new Set(ready.map((row) => Number(row.Day)))]) {
   const rows = ready.filter((row) => Number(row.Day) === day);
   const work = path.join(output, `day-${String(day).padStart(2, "0")}`);
   fs.mkdirSync(work);
-  const posts = rows.map((row) => {
-    const filename = row["Image Filename"];
-    const folder = row["Image Folder"];
-    const relativeMedia = `stories/${filename}`;
-    const sourceImage = path.resolve(source, folder, filename);
-    if (!sourceImage.startsWith(`${source}${path.sep}`) || !fs.existsSync(sourceImage)) {
-      throw new Error(`Ready Story image is missing: ${folder}/${filename}`);
-    }
-    fs.mkdirSync(path.join(work, "stories"), { recursive: true });
-    fs.copyFileSync(sourceImage, path.join(work, relativeMedia));
-    return {
-      reference: `story-d${String(day).padStart(2, "0")}-s${String(row.Slide).padStart(2, "0")}`,
-      title: row.Title,
-      caption: "",
-      format: "story",
-      media: [relativeMedia],
-      platforms: ["instagram"],
-      schedule: {
-        date: addDays(startDateArg, day - 1),
-        time: row["Time (EAT)"],
-      },
-      qaStatus: "ready",
-    };
-  });
+  const posts = await Promise.all(
+    rows.map(async (row) => {
+      const filename = row["Image Filename"];
+      const folder = row["Image Folder"];
+      const storyFilename = `${path.parse(filename).name}.jpg`;
+      const relativeMedia = `stories/${storyFilename}`;
+      const sourceImage = path.resolve(source, folder, filename);
+      if (
+        !sourceImage.startsWith(`${source}${path.sep}`) ||
+        !fs.existsSync(sourceImage)
+      ) {
+        throw new Error(`Ready Story image is missing: ${folder}/${filename}`);
+      }
+      fs.mkdirSync(path.join(work, "stories"), { recursive: true });
+      await sharp(sourceImage)
+        .flatten({ background: "#ffffff" })
+        .toColorspace("srgb")
+        .jpeg({ quality: 82, chromaSubsampling: "4:2:0", mozjpeg: true })
+        .toFile(path.join(work, relativeMedia));
+      return {
+        reference: `story-d${String(day).padStart(2, "0")}-s${String(row.Slide).padStart(2, "0")}`,
+        title: row.Title,
+        caption: "",
+        format: "story",
+        media: [relativeMedia],
+        platforms: ["instagram"],
+        schedule: {
+          date: addDays(startDateArg, day - 1),
+          time: row["Time (EAT)"],
+        },
+        qaStatus: "ready",
+      };
+    }),
+  );
   const manifest = {
     schemaVersion: "1.0",
     brand: "chezahub",
@@ -128,15 +142,22 @@ for (const day of [...new Set(ready.map((row) => Number(row.Day)))]) {
     path.join(work, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
-  const zip = path.join(output, `chezahub-stories-day-${String(day).padStart(2, "0")}.zip`);
+  const zip = path.join(
+    output,
+    `chezahub-stories-day-${String(day).padStart(2, "0")}.zip`,
+  );
   const built = spawnSync(process.execPath, [builder, work, zip], {
     cwd: process.cwd(),
     encoding: "utf8",
   });
   if (built.status !== 0) {
-    throw new Error(built.stderr || built.stdout || `Could not build Story day ${day}.`);
+    throw new Error(
+      built.stderr || built.stdout || `Could not build Story day ${day}.`,
+    );
   }
   results.push({ day, posts: posts.length, zip });
 }
 
-process.stdout.write(`${JSON.stringify({ source, startDate: startDateArg, results }, null, 2)}\n`);
+process.stdout.write(
+  `${JSON.stringify({ source, startDate: startDateArg, results }, null, 2)}\n`,
+);
